@@ -3,6 +3,8 @@ statsfile = "test/luacov.stats.out"
 reportfile = "test/luacov.report.out"
 includeuntestedfiles = true
 
+
+
 modules = {
 
     ["santoku"] = "src/santoku.lua",
