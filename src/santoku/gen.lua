@@ -28,16 +28,45 @@ M.pairs = function(t)
   return M.iter(t, pairs)
 end
 
+
+
+
+
 M.vals = function (t)
-  return M.map(M.pairs(t), utils.nret(2))
+  local co = co.make()
+  return M.gen(co.wrap(function ()
+    for i, v in pairs(t) do
+      if v ~= nil then
+        co.yield(v)
+      end
+    end
+  end))
 end
 
 M.keys = function (t)
   return M.map(M.pairs(t), utils.nret(1))
 end
 
+
+
+
+
 M.ivals = function (t)
-  return M.map(M.ipairs(t), utils.nret(2))
+  local co = co.make()
+  return M.gen(co.wrap(function ()
+    local max
+    if t.n ~= nil then
+      max = t.n
+    else
+      max = #t
+    end
+    for i = 1, max do
+      local v = t[i]
+      if v ~= nil then
+        co.yield(v)
+      end
+    end
+  end))
 end
 
 M.ikeys = function (t)
