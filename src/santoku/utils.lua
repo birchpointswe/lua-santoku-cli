@@ -4,21 +4,18 @@
 
 
 
-
-
-
 local M = {}
+
+
 
 M.unpack = unpack or table.unpack
 
 M.tuple = function (...)
   local n = select('#', ...)
-  if n == 0 then
-    return function() end, 0
-  else
-    return M.tupleh(nil, 0, n, ...), n
-  end
+  return M.tupleh(nil, 0, n, ...), n
 end
+
+
 
 
 M.tuples = function (a, b)
@@ -62,13 +59,12 @@ M.narg = function (...)
   return function (fn)
     return function (...)
       local args0 = M.tuple(...)
-      local args1 = {}
-      local ridx = 0
+      local args1 = M.tuple()
       for i = 1, n do
-        ridx = ridx + 1
-        args1[ridx] = select(select(i, idx()), args0())
+        local narg = select(select(i, idx()), args0())
+        args1 = M.tuples(args1, M.tuple(narg))
       end
-      return fn(M.unpack(args1))
+      return fn(args1())
     end
   end
 end
@@ -77,13 +73,12 @@ M.nret = function (...)
   local idx, n = M.tuple(...)
   return function (...)
     local args = M.tuple(...)
-    local rets = {}
-    local ridx = 0
+    local rets = M.tuple()
     for i = 1, n do
-      ridx = ridx + 1
-      rets[ridx] = select(select(i, idx()), args())
+      local nret = select(select(i, idx()), args())
+      rets = M.tuples(rets, M.tuple(nret))
     end
-    return M.unpack(rets, 1, ridx)
+    return rets()
   end
 end
 
@@ -162,8 +157,12 @@ M.setter = function (...)
   end
 end
 
-M.set = function (t, val, ...)
-  return M.setter(...)(val)(t)
+M.set = function (t, k, v)
+  return (M.setter(k)(v)(t))
+end
+
+M.dset = function (t, v, ...)
+  return M.setter(...)(v)(t)
 end
 
 M.maybe = function (a, f, g)

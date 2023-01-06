@@ -13,13 +13,14 @@
 
 
 
-
 local utils = require("santoku.utils")
 local co = require("santoku.co")
 
 local GEN_TAG = {}
 
 local M = {}
+
+
 
 
 
@@ -126,31 +127,22 @@ M.ikeys = function (t)
   return M.ipairs(t):map(utils.nret(1))
 end
 
-M.caller = function (...)
-  local args = utils.pack(...)
-  return function (f)
-    assert(type(f) == "function")
-    return f(utils.unpack(args))
+M.mapper = function (fn, ...)
+  fn = fn or utils.id
+  local args, n = utils.tuple(...)
+  return function (gen)
+    return M.genco(function (co)
+      while not gen:done() do
+        local vals = utils.tuple(gen())
+        local allargs = utils.tuples(args, vals)
+        co.yield(fn(allargs()))
+      end
+    end)
   end
 end
 
-M.call = function (f, ...)
-  assert(type(f) == "function")
-  return M.caller(...)(f)
-end
-
-M.matcher = function (pat)
-  assert(type(pat) == "string")
-  return function (str)
-    assert(type(str) == "string")
-    return M.gennil(str:gmatch(pat))
-  end
-end
-
-M.match = function (str, pat)
-  assert(type(str) == "string")
-  assert(type(pat) == "string")
-  return M.matcher(pat)(str)
+M.map = function (gen, fn, ...)
+  return M.mapper(fn, ...)(gen)
 end
 
 M.reducer = function (acc, ...)
@@ -176,69 +168,6 @@ M.reduce = function (gen, acc, ...)
   return M.reducer(acc, ...)(gen)
 end
 
-M.taker = function (n)
-  assert(n == nil or type(n) == "number")
-  return function (gen)
-    assert(type(gen) == "table")
-    assert(gen.tag == GEN_TAG)
-    if n == nil then
-      return gen
-    else
-      return M.genco(function (co)
-        while n > 0 and not gen:done() do
-          co.yield(gen())
-          n = n - 1
-        end
-      end)
-    end
-  end
-end
-
-M.take = function (gen, n)
-  return M.taker(n)(gen)
-end
-
-M.max = function (gen, def)
-  return M.reduce(gen, function(a, b)
-    if a > b then
-      return a
-    else
-      return b
-    end
-  end, def)
-end
-
-M.flatten = function (gengen)
-  assert(type(gengen) == "table")
-  assert(gengen.tag == GEN_TAG)
-  return M.genco(function (co)
-    while not gengen:done() do
-      local gen = gengen()
-      while not gen:done() do
-        co.yield(gen())
-      end
-    end
-  end)
-end
-
-
-
-M.collect = function (gen)
-  return M.reduce(gen, function (a, ...)
-    if select("#", ...) <= 1 then
-      return utils.append(a, ...)
-    else
-
-
-
-
-
-
-      return utils.append(a, { ... })
-    end
-  end, {})
-end
-
 M.filterer = function (fn, ...)
   fn = fn or utils.id
   assert(type(fn) == "function")
@@ -258,30 +187,6 @@ end
 
 M.filter = function (gen, fn, ...)
   return M.filterer(fn, ...)(gen)
-end
-
-M.mapper = function (fn, ...)
-  fn = fn or utils.id
-  local args, n = utils.tuple(...)
-  return function (gen)
-    return M.genco(function (co)
-      while not gen:done() do
-        local vals = utils.tuple(gen())
-        local allargs = utils.tuples(args, vals)
-        co.yield(fn(allargs()))
-      end
-    end)
-  end
-end
-
-M.map = function (gen, fn, ...)
-  return M.mapper(fn, ...)(gen)
-end
-
-M.each = function (gen, fn)
-  while not gen:done() do
-    fn(gen())
-  end
 end
 
 
@@ -334,6 +239,41 @@ M.zip = function (...)
   return M.zipper()(...)
 end
 
+M.taker = function (n)
+  assert(n == nil or type(n) == "number")
+  return function (gen)
+    assert(type(gen) == "table")
+    assert(gen.tag == GEN_TAG)
+    if n == nil then
+      return gen
+    else
+      return M.genco(function (co)
+        while n > 0 and not gen:done() do
+          co.yield(gen())
+          n = n - 1
+        end
+      end)
+    end
+  end
+end
+
+M.take = function (gen, n)
+  return M.taker(n)(gen)
+end
+
+M.caller = function (...)
+  local args = utils.tuple(...)
+  return function (f)
+    assert(type(f) == "function")
+    return f(args())
+  end
+end
+
+M.call = function (f, ...)
+  assert(type(f) == "function")
+  return M.caller(...)(f)
+end
+
 
 M.aller = function (fn, ...)
   fn = fn or utils.id
@@ -356,10 +296,7 @@ M.tabulator = function (keys, opts)
   return function (genVals)
     local t = M.ivals(keys)
       :zip(genVals)
-      :reduce(function (a, k, v)
-        a[k] = v
-        return a
-      end, {})
+      :reduce(utils.set, {})
     if rest then
       t[rest] = genVals:collect()
     end
@@ -382,6 +319,28 @@ M.find = function (gen, ...)
   return M.finder(...)(gen)
 end
 
+M.picker = function (n)
+  return function (gen)
+    return gen:slice(n, 1):head()
+  end
+end
+
+M.pick = function (gen, n)
+  return M.picker(n, gen)
+end
+
+M.slicer = function (start, num)
+  start = start or 1
+  return function (gen)
+    gen:take(start - 1):collect()
+    return gen:take(num)
+  end
+end
+
+M.slice = function (gen, start, num)
+  return M.slicer(start, num)(gen)
+end
+
 M.chain = function (...)
   local gens = M.args(...)
   return M.genco(function (co)
@@ -390,6 +349,40 @@ M.chain = function (...)
     end)
   end)
 end
+
+M.flatten = function (gengen)
+  assert(type(gengen) == "table")
+  assert(gengen.tag == GEN_TAG)
+  return M.genco(function (co)
+    while not gengen:done() do
+      local gen = gengen()
+      while not gen:done() do
+        co.yield(gen())
+      end
+    end
+  end)
+end
+
+M.each = function (gen, fn)
+  while not gen:done() do
+    fn(gen())
+  end
+end
+
+
+
+M.collect = function (gen)
+  return M.reduce(gen, function (a, ...)
+    if select("#", ...) <= 1 then
+      return utils.append(a, ...)
+    else
+      return utils.append(a, { ... })
+    end
+  end, {})
+end
+
+
+
 
 M.equals = function (...)
   return M.zipper({
@@ -406,73 +399,14 @@ M.equals = function (...)
   })(...):all()
 end
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-M.splitter = function (pat, opts)
-  opts = opts or {}
-  local delim = opts.delim or false
-  return function (str)
-    return M.genco(function (co)
-      local n = 0
-      local ls = 0
-      local stop = false
-      while not stop do
-        local s, e = str:find(pat, n)
-        stop = s == nil
-        if stop then
-          s = #str + 1
-        end
-        if delim == true then
-          co.yield(str:sub(n, s - 1))
-          if not stop then
-            co.yield(str:sub(s, e))
-          end
-        elseif delim == "left" then
-          co.yield(str:sub(n, e))
-        elseif delim == "right" then
-          co.yield(str:sub(ls, s - 1))
-        else
-          co.yield(str:sub(n, s - 1))
-        end
-        if stop then
-          break
-        else
-          ls = s
-          n = e + 1
-        end
-      end
-    end)
-  end
-end
-
-M.split = function (str, pat, opts)
-  return M.splitter(pat, opts)(str)
-end
-
-M.slicer = function (start, num)
-  start = start or 1
-  return function (gen)
-    gen:take(start - 1):collect()
-    return gen:take(num)
-  end
-end
-
-M.slice = function (gen, start, num)
-  return M.slicer(start, num)(gen)
+M.max = function (gen, def)
+  return M.reduce(gen, function(a, b)
+    if a > b then
+      return a
+    else
+      return b
+    end
+  end, def)
 end
 
 M.head = function (gen)
@@ -482,28 +416,6 @@ end
 M.tail = function (gen)
   gen()
   return gen
-end
-
-M.picker = function (n)
-  return function (gen)
-    return gen:slice(n, 1):head()
-  end
-end
-
-M.pick = function (gen, n)
-  return M.picker(n, gen)
-end
-
-
-
-
-M.compose = function (...)
-  return M.args(...)
-    :reduce(function(f, g)
-      return function(...)
-        return f(g(...))
-      end
-    end)
 end
 
 return M
