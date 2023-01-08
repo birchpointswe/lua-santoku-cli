@@ -1,5 +1,8 @@
 local gen = require("santoku.gen")
 
+
+
+
 local M = {}
 
 M.matcher = function (pat)
@@ -98,8 +101,18 @@ end
 
 
 M.interp = function (s, t)
-  M.unimplemented("interp")
+  return table.concat(M.split(s, "%%%w*", {
+    delim = true
+  }):map(function (s)
+    local v = s:match("%%(%w*)")
+    if v ~= nil then
+      return t[v]
+    else
+      return s
+    end
+  end):collect())
 end
+
 
 
 

@@ -20,12 +20,17 @@
 
 
 
+
+
+
 local tup = require("santoku.tuple")
 local utils = require("santoku.utils")
 local op = require("santoku.op")
 local co = require("santoku.co")
 
 local M = {}
+
+
 
 M.END = {}
 M.GEN = {}
@@ -41,12 +46,16 @@ M.genco = function (fn, ...)
   assert(type(fn) == "function")
   local co = co.make()
   local cor = co.create(fn)
+  local idx = 0
   local val = tup(co.resume(cor, co, ...))
   if not (select(1, val())) then
     error((select(2, val())))
   end
   local gen = {
     tag = M.GEN,
+    idx = function ()
+      return idx
+    end,
     done = function ()
       return co.status(cor) == "dead"
     end
@@ -55,7 +64,7 @@ M.genco = function (fn, ...)
     __index = M,
     __call = function (...)
       if gen:done() then
-        return nil
+        return
       end
       local nval = tup(co.resume(cor, ...))
       if not (select(1, nval())) then
@@ -63,6 +72,7 @@ M.genco = function (fn, ...)
       else
         local ret = val
         val = nval
+        idx = idx + 1
         return select(2, ret())
       end
     end
@@ -73,9 +83,13 @@ end
 
 M.gensent = function (fn, sent, ...)
   assert(type(fn) == "function")
+  local idx = 0
   local val = tup(fn(...))
   local gen = {
     tag = M.GEN,
+    idx = function ()
+      return idx
+    end,
     done = function ()
 
 
@@ -91,6 +105,7 @@ M.gensent = function (fn, sent, ...)
       local nval = tup(fn(...))
       local ret = val
       val = nval
+      idx = idx + 1
       return ret()
     end
   })
@@ -99,6 +114,10 @@ end
 M.gennil = function (fn, ...)
   return M.gensent(fn, nil, ...)
 end
+
+
+
+
 
 M.genend = function (fn, ...)
   return M.gensent(fn, M.END, ...)
@@ -130,9 +149,7 @@ end
 M.args = function (...)
   local args = tup(...)
   return M.genco(function (co)
-    for i = 1, args:len() do
-      co.yield((select(i, args())))
-    end
+    args:each(co.yield)
   end)
 end
 
@@ -218,7 +235,7 @@ M.filter = function (gen, fn, ...)
 end
 
 M.zipper = function (opts)
-  mode = (opts or {}).mode or "first"
+  local mode = (opts or {}).mode or "first"
   assert(mode == "first" or mode == "longest")
   return function (...)
     local gens = tup(...)
@@ -232,14 +249,12 @@ M.zipper = function (opts)
             nb = nb + 1
             ret = ret:append((tup(gen())))
           elseif i == 1 and mode == "first" then
-            break
+            return
           else
             ret = ret:append((tup()))
           end
         end
-        if i == 1 and mode == "first" then
-          break
-        elseif nb == 0 then
+        if nb == 0 then
           break
         else
           co.yield(ret())

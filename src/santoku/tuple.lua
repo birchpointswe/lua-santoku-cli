@@ -7,10 +7,27 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 local M = {}
 
 M.tuple = function (...)
   return M.tuplew(M.tupleh(nil, 0, select('#', ...), ...))
+end
+
+
+
+M.push = function (a, b)
+  return M.tuple(b):append(a())
 end
 
 
@@ -58,9 +75,30 @@ M.head = function (tup)
   return (tup())
 end
 
+M.tail = function (tup)
+  return tup:sel(2)
+end
+
+
+local each
+each = function (fn, args, n, a, ...)
+  if n == 0 then
+    return
+  else
+    fn(a, args())
+    each(fn, args, n - 1, ...)
+  end
+end
+
+M.each = function (tup, fn, ...)
+  return each(fn, M.tuple(...), tup:len(), tup())
+end
+
 M.get = function (tup, i)
   return tup:sel(i):head()
 end
+
+
 
 
 
@@ -79,6 +117,46 @@ M.equals = function (a, ...)
     end
   end
   return true
+end
+
+
+local pick
+pick = function (idx, head, tail, ret)
+  if idx:len() == 0 then
+    return head, tail, ret
+  elseif tail:len() == 0 then
+    return pick(idx:tail(), head:append(tail()), M.tuple(), ret)
+  elseif idx:head() == head:len() + 1 then
+    return pick(idx:tail():map(function (i)
+      if i >= head:len() + 1 then
+        return i - 1
+      else
+        return i
+      end
+    end), M.tuple(), head:append(tail:tail()()), ret:append(tail:head()))
+  else
+    return pick(idx, head:append(tail:head()), tail:tail(), ret)
+  end
+end
+
+
+M.pick = function (tup, ...)
+  local h, t, p = pick(M.tuple(...), M.tuple(), tup, M.tuple())
+  return h:append(t()), p
+end
+
+local map
+map = function (head, tail, fn, ...)
+  if tail:len() == 0 then
+    return head
+  else
+    local v = fn(M.tuple(tail:head()):append(...)())
+    return map(head:append(v), tail:tail(), fn, ...)
+  end
+end
+
+M.map = function (tup, ...)
+  return map(M.tuple(), tup, ...)
 end
 
 return setmetatable({}, {
