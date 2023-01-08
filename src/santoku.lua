@@ -3,11 +3,16 @@
 
 
 
+
+
+
 local utils = require("santoku.utils")
 
-return utils.assign({},
+return utils.assign({
+    tup = require("santoku.tuple"),
+    co = require("santoku.co")
+  },
   utils,
-  require("santoku.co"),
   require("santoku.err"),
   require("santoku.fs"),
   require("santoku.gen"),
