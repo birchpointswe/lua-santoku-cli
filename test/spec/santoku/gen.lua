@@ -1,5 +1,8 @@
+
+
+
 local gen = require("santoku.gen")
-local tbl = require("santoku.table")
+local vec = require("santoku.vector")
 
 describe("santoku.gen", function ()
 
@@ -476,9 +479,7 @@ describe("santoku.gen", function ()
     it("creates a table from a generator", function ()
 
       local vals = gen.args(1, 2, 3, 4)
-      local keys = { "one", "two", "three", "four" }
-
-      local tbl = vals:tabulate(keys)
+      local tbl = vals:tabulate("one", "two", "three", "four" )
 
       assert.equals(1, tbl.one)
       assert.equals(2, tbl.two)
@@ -490,12 +491,10 @@ describe("santoku.gen", function ()
     it("captures remaining values in a 'rest' property", function ()
 
       local vals = gen.args(1, 2, 3, 4)
-      local keys = { "one"  }
-
-      local tbl = vals:tabulate(keys, { rest = "others" })
+      local tbl = vals:tabulate({ rest = "others" }, "one")
 
       assert.equals(1, tbl.one)
-      assert.same({ 2, 3, 4 }, tbl.others)
+      assert.same({ 2, 3, 4, n = 3 }, tbl.others)
 
     end)
 
@@ -542,45 +541,45 @@ describe("santoku.gen", function ()
 
     end)
 
-    it("checks if two generators have equal values", function ()
+   it("checks if two generators have equal values", function ()
 
-      local gen1 = gen.args(1, 2, 3, 4)
-      local gen2 = gen.args(1, 2, 3, 4)
+     local gen1 = gen.args(1, 2, 3, 4)
+     local gen2 = gen.args(1, 2, 3, 4)
 
-      assert.equals(true, gen1:equals(gen2))
-      assert(gen1:done())
-      assert(gen2:done())
+     assert.equals(true, gen1:equals(gen2))
+     assert(gen1:done())
+     assert(gen2:done())
 
-    end)
+   end)
 
-    it("checks if two generators have equal values", function ()
+   it("checks if two generators have equal values", function ()
 
-      local gen1 = gen.args(1, 2, 3, 4)
-
-
+     local gen1 = gen.args(1, 2, 3, 4)
 
 
 
-      assert.equals(false, gen1:equals(gen1))
-
-    end)
-
-    it("handles odd length generators", function ()
-
-      local gen1 = gen.args(1, 2, 3)
-      local gen2 = gen.args(1, 2, 3, 4)
-
-      assert.equals(false, gen1:equals(gen2))
-      assert(gen1:done())
 
 
+     assert.equals(false, gen1:equals(gen1))
+
+   end)
+
+   it("handles odd length generators", function ()
+
+     local gen1 = gen.args(1, 2, 3)
+     local gen2 = gen.args(1, 2, 3, 4)
+
+     assert.equals(false, gen1:equals(gen2))
+     assert(gen1:done())
 
 
 
 
 
 
-    end)
+
+
+   end)
 
   end)
 
@@ -630,18 +629,19 @@ describe("santoku.gen", function ()
 
   end)
 
-  describe("collect", function ()
+  describe("vec", function ()
 
-    it("collects generator returns into a table", function ()
+    it("collects generator returns into a vec", function ()
 
       local gen = gen.genco(function (co)
         co.yield(1, 2, 3)
         co.yield(4, 5, 6)
       end)
 
-      local ret = gen:collect()
+      local expected = vec({ 1, 2, 3 }, { 4, 5, 6 })
+      local ret = gen:vec()
 
-      assert.same({{ 1, 2, 3 }, { 4, 5, 6 }}, ret)
+      assert.same(expected, ret)
 
     end)
 
