@@ -1,5 +1,4 @@
 local fs = require("lfs")
-local fun = require("santoku.fun")
 local compat = require("santoku.compat")
 local str = require("santoku.string")
 local gen = require("santoku.gen")
@@ -54,6 +53,7 @@ end
 
 
 
+
 M.walk = function (dir, opts)
   local prune = (opts or {}).prune or compat.const(false)
   local prunekeep = (opts or {}).prunekeep or false
@@ -102,6 +102,7 @@ M.lines = function (fp)
   end
 end
 
+
 M.files = function (dir, opts)
   local recurse = (opts or {}).recurse
   local walkopts = {}
@@ -111,7 +112,11 @@ M.files = function (dir, opts)
     end
   end
   return M.walk(dir, walkopts)
+    :filter(function (ok, _, attr)
+      return not ok or attr.mode == "file"
+    end)
 end
+
 
 M.dirs = function (dir, opts)
   local recurse = (opts or {}).recurse

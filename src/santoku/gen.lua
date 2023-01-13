@@ -12,19 +12,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 local vec = require("santoku.vector")
 local err = require("santoku.err")
 local fun = require("santoku.fun")
@@ -63,7 +50,6 @@ M.genco = function (fn, ...)
     error(val[2])
   end
   local gen = {
-    tag = M.GEN,
 
     idx = function ()
       return idx
@@ -98,7 +84,6 @@ M.gensent = function (fn, sent, ...)
   local idx = 0
   local val = vec(fn(...))
   local gen = {
-    tag = M.GEN,
     idx = function ()
       return idx
     end,
@@ -296,10 +281,12 @@ M.slice = function (gen, start, num)
   return gen:take(num)
 end
 
+
+
 M.each = function (gen, fn, ...)
   assert(M.isgen(gen))
   while not gen:done() do
-    fn(gen(), ...)
+    fn(vec(gen()):append(...):unpack())
   end
 end
 
@@ -352,17 +339,6 @@ M.unlazy = function (gen, n)
   end)
 end
 
-
-
-M.all = function (gen)
-  assert(M.isgen(gen))
-  return gen:reduce(function (a, n)
-    return a and n
-  end, true)
-end
-
-M.none = fun.compose(op["not"], M.find)
-
 M.discard = function (gen)
   assert(M.isgen(gen))
   while not gen:done() do
@@ -396,6 +372,17 @@ M.equals = function (...)
   local vals = M.zip({ mode = "longest" }, ...):map(vec.equals):all()
   return vals and M.args(...):map(M.done):all()
 end
+
+
+
+M.all = function (gen)
+  assert(M.isgen(gen))
+  return gen:reduce(function (a, n)
+    return a and n
+  end, true)
+end
+
+M.none = fun.compose(op["not"], M.find)
 
 M.max = function (gen, ...)
   assert(M.isgen(gen))

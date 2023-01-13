@@ -15,9 +15,6 @@
 
 
 
-
-
-
 local compat = require("santoku.compat")
 local tbl = require("santoku.table")
 
@@ -25,7 +22,7 @@ local M = {}
 
 
 M.isvec = function (t)
-  if type(t) ~= "table" then
+  if type(t) ~= "table" or t.n == nil then
     return false
   end
   return (getmetatable(t) or {}).__index == M
@@ -59,6 +56,7 @@ M.pack = function (...)
 end
 
 M.unpack = function (t, s, e)
+  assert(M.isvec(t))
   s = s or 1
   e = e or t.n
   assert(type(s) == "number")
@@ -109,7 +107,7 @@ M.find = function (t, fn, ...)
   assert(type(fn) == "function")
   for i = 1, t.n do
     if fn(t[i], ...) then
-      return t[i]
+      return t[i], i
     end
   end
 end
@@ -177,19 +175,23 @@ end
 
 M.extend = function (t, ...)
   assert(M.isvec(t))
-  local ts = M.pack(...)
-  for i = 1, ts.n do
-    t:copy(ts[i])
+  local m = select("#", ...)
+  for i = 1, m do
+    local t0 = select(i, ...)
+    assert(M.isvec(t0))
+    t:copy(t0)
   end
   return t
 end
 
 M.append = function (t, ...)
   assert(M.isvec(t))
-
-
-
-  return t:extend(M.pack(...))
+  local m = select("#", ...)
+  for i = 1, m do
+    t[t.n + i] = (select(i, ...))
+  end
+  t.n = t.n + m
+  return t
 end
 
 M.each = function (t, fn, ...)
@@ -208,6 +210,7 @@ M.map = function (t, fn, ...)
   end
   return t
 end
+
 
 M.reduce = function (t, acc, ...)
   assert(M.isvec(t))
@@ -258,24 +261,26 @@ end
 
 
 
-M.zip = function (opts, ...)
-  local vecs
+
+M.zip = function (...)
+  local start = 1
+  local opts = select(1, ...)
   if M.isvec(opts) then
-    vecs = M.pack(opts, ...)
     opts = {}
   else
-    vecs = M.pack(...)
+    start = 2
   end
   assert(type(opts) == "table")
   local mode = opts.mode or "first"
   assert(mode == "first" or mode == "longest")
   local ret = M.pack()
+  local m = select("#", ...)
   local i = 1
   while true do
     local nxt = M.pack()
     local nils = 0
-    for j = 1, vecs.n do
-      local vec = vecs[j]
+    for j = start, m do
+      local vec = select(j, ...)
       if vec.n < i then
         if j == 1 and mode == "first" then
           return ret
@@ -286,7 +291,7 @@ M.zip = function (opts, ...)
         nxt:append(vec[i])
       end
     end
-    if nils == vecs.n then
+    if nils == m then
       break
     else
       ret:append(nxt)
@@ -296,33 +301,36 @@ M.zip = function (opts, ...)
   return ret
 end
 
-M.tabulate = function (t, opts, ...)
+M.tabulate = function (t, ...)
   assert(M.isvec(t))
-  local keys
+  local start = 1
+  local opts = select(1, ...)
   if type(opts) == "table" then
-    keys = M.pack(...)
+    start = 2
   else
-    keys = M.pack(opts, ...)
     opts = {}
   end
   local rest = opts.rest
-  local z = keys:zip(t)
-  local o = z:reduce(function (a, kv)
-    a[kv[1]] = kv[2]
-    return a
-  end, {})
-  if rest then
-    o[rest] = t:slice(z.n + 1)
+  local ret = {}
+  local i = start
+  local m = select("#", ...)
+  while i <= m and i <= t.n do
+    ret[select(i, ...)] = t[i + 1 - start]
+    i = i + 1
   end
-  return o
+  if rest then
+    ret[rest] = t:slice(i + 1 - start)
+  end
+  return ret
 end
 
 M.equals = function (t, ...)
   assert(M.isvec(t))
-  local ts = M.pack(...)
-  for i = 1, ts.n do
-    assert(M.isvec(ts[i]))
-    if ts[i].n ~= t.n then
+  local m = select("#", ...)
+  for i = 1, m do
+    local t0 = select(i, ...)
+    assert(M.isvec(t0))
+    if t0.n ~= t.n then
       return false
     end
   end

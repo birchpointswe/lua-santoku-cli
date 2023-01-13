@@ -5,14 +5,6 @@ local M = {}
 
 
 
-
-
-
-
-
-
-
-
 M.narg = function (...)
   local idx = vec(...)
   return function (fn, ...)
@@ -20,9 +12,9 @@ M.narg = function (...)
     return function (...)
       local args = vec(...):extend(bound)
       local nargs = vec()
-      idx:each(function (i)
-        nargs:move(args, nargs.n + 1, i, i)
-      end)
+      for i = 1, idx.n do
+        nargs:move(args, nargs.n + 1, idx[i], idx[i])
+      end
       nargs:move(args)
       return fn(nargs:unpack())
     end
@@ -31,13 +23,13 @@ end
 
 
 
+
 M.nret = function (...)
   local idx = vec(...)
   return function (...)
-    local args = vec(...)
     local rets = vec()
     for i = 1, idx.n do
-      local nret = args[idx[i]]
+      local nret = select(idx[i], ...)
       rets = rets:append(nret)
     end
     return rets:unpack()
