@@ -12,6 +12,10 @@
 
 
 
+
+
+
+
 local vec = require("santoku.vector")
 local err = require("santoku.err")
 local fun = require("santoku.fun")
@@ -314,6 +318,24 @@ M.chain = function (...)
   return M.flatten(M.args(...))
 end
 
+M.paster = function (gen, ...)
+  local args = vec(...)
+  return gen:map(function (...)
+    return vec(...):extend(args):unpack()
+  end)
+end
+
+M.pastel = function (gen, ...)
+  local args = vec(...)
+  return gen:map(function (...)
+    return vec():extend(args):append(...):unpack()
+  end)
+end
+
+M.empty = function ()
+  return M.gennil(function () return end)
+end
+
 M.flatten = function (gengen)
   assert(M.isgen(gengen))
   return M.genco(function (co)
@@ -331,6 +353,9 @@ M.chunk = function (gen, n)
     end
   end)
 end
+
+
+
 
 M.unlazy = function (gen, n)
   assert(M.isgen(gen))

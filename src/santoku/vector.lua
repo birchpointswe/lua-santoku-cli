@@ -15,7 +15,14 @@
 
 
 
+
+
+
+
+
+
 local compat = require("santoku.compat")
+local op = require("santoku.op")
 local tbl = require("santoku.table")
 
 local M = {}
@@ -79,9 +86,31 @@ M.insert = function (t, i, v)
   return t
 end
 
-M.sort = function (t)
+
+
+M.sort = function (t, opts)
   assert(M.isvec(t))
-  table.sort(t, 1, t.n)
+  opts = opts or {}
+  assert(type(opts) == "table")
+  local fn = opts.fn or op.lt
+  local unique = opts.unique or false
+  assert(type(unique) == "boolean")
+  table.sort(t, fn, 1, t.n)
+  if unique and t.n > 1 then
+    return t:filter(function (v, i)
+      return i == 1 or v ~= t[i - 1]
+    end)
+  end
+  return t
+end
+
+M.push = M.append
+
+M.pop = function (t)
+  assert(M.isvec(t))
+  if t.n > 0 then
+    t.n = t.n - 1
+  end
   return t
 end
 
@@ -238,7 +267,7 @@ M.filter = function (t, fn, ...)
   local reme = nil
   local i = 1
   while i <= t.n do
-    if not fn(t[i], ...)  then
+    if not fn(t[i], i, ...)  then
       if rems == nil then
         rems = i
         reme = i
