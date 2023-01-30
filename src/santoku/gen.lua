@@ -16,6 +16,10 @@
 
 
 
+
+
+
+
 local vec = require("santoku.vector")
 local err = require("santoku.err")
 local fun = require("santoku.fun")
@@ -45,7 +49,7 @@ end
 
 
 M.genco = function (fn, ...)
-  assert(type(fn) == "function")
+  assert(compat.iscallable(fn))
   local co = co.make()
   local cor = co.create(fn)
   local idx = 0
@@ -84,7 +88,7 @@ end
 
 
 M.gensent = function (fn, sent, ...)
-  assert(type(fn) == "function")
+  assert(compat.iscallable(fn))
   local idx = 0
   local val = vec(fn(...))
   local gen = {
@@ -191,7 +195,7 @@ end
 
 M.reduce = function (gen, acc, ...)
   assert(M.isgen(gen))
-  assert(type(acc) == "function")
+  assert(compat.iscallable(acc))
   local val = vec(...)
   if gen:done() then
     return val:unpack()
@@ -207,7 +211,7 @@ end
 M.filter = function (gen, fn, ...)
   assert(M.isgen(gen))
   fn = fn or compat.id
-  assert(type(fn) == "function")
+  assert(compat.iscallable(fn))
   local args = vec(...)
   return M.genco(function (co)
     while not gen:done() do
@@ -423,6 +427,16 @@ end
 M.head = function (gen)
   assert(M.isgen(gen))
   return gen()
+end
+
+
+M.last = function (gen)
+  assert(M.isgen(gen))
+  local last = vec()
+  while not gen:done() do
+    last = vec(gen())
+  end
+  return last:unpack()
 end
 
 M.tail = function (gen)
