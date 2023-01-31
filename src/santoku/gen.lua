@@ -288,17 +288,16 @@ M.chunk = function (gen, n)
         ret(chunk)
         m = n
         chunk = vec()
-      else
-
-
-
-        if select("#", ...) > 1 then
-          chunk:append(vec(...))
-        else
-          chunk:append((select(1, ...)))
-        end
-        m = m - 1
       end
+
+
+
+      if select("#", ...) > 1 then
+        chunk:append(vec(...))
+      else
+        chunk:append((select(1, ...)))
+      end
+      m = m - 1
     end)
     if chunk.n > 0 then
       ret(chunk)
