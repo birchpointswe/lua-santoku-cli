@@ -20,7 +20,11 @@ M.sh = function (...)
   if ok then
 
 
-    return true, gen.gennil(iter:lines())
+    return true, gen.gen(function (ret)
+      for line in iter:lines() do
+        ret(line)
+      end
+    end)
   else
     return false, iter, cd
   end

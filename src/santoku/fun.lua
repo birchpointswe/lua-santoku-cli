@@ -3,6 +3,8 @@ local vec = require("santoku.vector")
 
 local M = {}
 
+M.noop = function () end
+
 
 
 M.narg = function (...)
