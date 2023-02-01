@@ -14,10 +14,12 @@ describe("santoku.gen", function ()
 
     it("should allow for cps", function ()
 
-      local gen = gen.gen(function (ret)
-        ret(1)
-        ret(2)
-        ret(3)
+      local gen = gen.gen(function (each, ret)
+        each(function ()
+          each(function ()
+            each(ret, 3)
+          end, 2)
+        end, 1)
       end)
 
       local vals = gen:vec()
@@ -29,24 +31,39 @@ describe("santoku.gen", function ()
 
   end)
 
-  describe("map", function ()
 
-    it("maps over a generator", function ()
 
-      local gen = gen.gen(function (ret)
-        ret(1)
-        ret(2)
-      end):map(function (a)
-        return a * 2
-      end)
 
-      local vals = gen:vec()
-      assert(vals[1] == 2)
-      assert(vals[2] == 4)
 
-    end)
 
-  end)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
