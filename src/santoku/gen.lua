@@ -30,10 +30,6 @@ local co = require("santoku.co")
 local M = {}
 
 
-
-M.END = {}
-
-
 M.isgen = function (t)
   if type(t) ~= "table" then
     return false
@@ -91,7 +87,7 @@ M.gensent = function (fn, sent, ...)
   assert(compat.iscallable(fn))
   local idx = 0
   local ret = vec()
-  local nxt = vec(fn(...))
+  local nxt = vec(fn(sent, ...))
   local gen = {
     idx = function ()
       return idx
@@ -107,7 +103,7 @@ M.gensent = function (fn, sent, ...)
         return
       end
       ret:trunc():copy(nxt)
-      nxt:appendo(1, fn(...))
+      nxt:appendo(1, fn(sent, ...))
       idx = idx + 1
       return ret:unpack()
     end
@@ -118,12 +114,8 @@ M.gennil = function (fn, ...)
   return M.gensent(fn, nil, ...)
 end
 
-
-
-
-
 M.genend = function (fn, ...)
-  return M.gensent(fn, M.END, ...)
+  return M.gensent(fn, M, ...)
 end
 
 
