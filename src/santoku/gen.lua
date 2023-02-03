@@ -31,10 +31,6 @@ local tup = require("santoku.tuple")
 local M = {}
 
 
-
-M.END = {}
-
-
 M.isgen = function (t)
   if type(t) ~= "table" then
     return false
@@ -91,7 +87,7 @@ end
 M.gensent = function (fn, sent, ...)
   assert(compat.iscallable(fn))
   local idx = 0
-  local val = tup(fn(...))
+  local val = tup(fn(sent, ...))
   local gen = {
     idx = function ()
       return idx
@@ -107,7 +103,7 @@ M.gensent = function (fn, sent, ...)
         return
       end
       idx = idx + 1
-      return val.set(fn(...))
+      return val.set(fn(sent, ...))
     end
   })
 end
@@ -121,7 +117,7 @@ end
 
 
 M.genend = function (fn, ...)
-  return M.gensent(fn, M.END, ...)
+  return M.gensent(fn, M, ...)
 end
 
 
