@@ -30,10 +30,6 @@ local co = require("santoku.co")
 local M = {}
 
 
-
-M.END = {}
-
-
 M.isgen = function (t)
   if type(t) ~= "table" then
     return false
@@ -91,7 +87,7 @@ M.gensent = function (fn, sent, ...)
   assert(compat.iscallable(fn))
   local idx = 0
   local ret
-  local nxt = compat.pack(fn(...))
+  local nxt = compat.pack(fn(sent, ...))
   local gen = {
     idx = function ()
       return idx
@@ -107,7 +103,7 @@ M.gensent = function (fn, sent, ...)
         return
       end
       ret = nxt
-      nxt = compat.pack(fn(...))
+      nxt = compat.pack(fn(sent, ...))
       idx = idx + 1
       return compat.unpack(ret)
     end
@@ -118,12 +114,8 @@ M.gennil = function (fn, ...)
   return M.gensent(fn, nil, ...)
 end
 
-
-
-
-
 M.genend = function (fn, ...)
-  return M.gensent(fn, M.END, ...)
+  return M.gensent(fn, M, ...)
 end
 
 
