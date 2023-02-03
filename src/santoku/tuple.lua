@@ -2,6 +2,8 @@ local co = require("santoku.co")
 
 local function tuple ()
   local co = co()
+
+
   local function helper (...)
     co.yield(...)
     return helper(co.yield(...))
