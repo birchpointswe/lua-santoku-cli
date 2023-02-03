@@ -46,7 +46,7 @@ end
 
 M.genco = function (fn, ...)
   assert(compat.iscallable(fn))
-  local co = co.make()
+  local co = co()
   local cor = co.create(fn)
   local idx = 0
   local ret = vec()
@@ -69,7 +69,7 @@ M.genco = function (fn, ...)
       if gen:done() then
         return
       end
-      ret:trunc():copy(nxt)
+      nxt, ret = ret, nxt
       nxt:appendo(1, co.resume(cor, ...))
       if not nxt[1] then
         error(nxt[2])
@@ -102,7 +102,7 @@ M.gensent = function (fn, sent, ...)
       if gen:done() then
         return
       end
-      ret:trunc():copy(nxt)
+      nxt, ret = ret, nxt
       nxt:appendo(1, fn(sent, ...))
       idx = idx + 1
       return ret:unpack()
@@ -174,10 +174,14 @@ end
 M.map = function (gen, fn, ...)
   assert(M.isgen(gen))
   fn = fn or fun.id
+  local val = vec()
   local args = vec(...)
   return M.genco(function (co)
+
+
+
     while not gen:done() do
-      local val = vec(gen())
+      val:appendo(1, gen())
       co.yield(fn(val:extend(args):unpack()))
     end
   end)
@@ -203,10 +207,14 @@ M.filter = function (gen, fn, ...)
   assert(M.isgen(gen))
   fn = fn or compat.id
   assert(compat.iscallable(fn))
+  local val = vec()
   local args = vec(...)
   return M.genco(function (co)
+
+
+
     while not gen:done() do
-      local val = vec(gen())
+      val:appendo(1, gen())
       if fn(val:extend(args):unpack()) then
         co.yield(val:unpack())
       end
@@ -224,6 +232,8 @@ M.zip = function (opts, ...)
   end
   local mode = opts.mode or "first"
   assert(mode == "first" or mode == "longest")
+
+
   return M.genco(function (co)
     while true do
       local nb = 0
@@ -427,7 +437,7 @@ M.last = function (gen)
   assert(M.isgen(gen))
   local last = vec()
   while not gen:done() do
-    last = vec(gen())
+    last:appendo(1, gen())
   end
   return last:unpack()
 end
