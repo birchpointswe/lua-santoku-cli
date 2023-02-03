@@ -1,35 +1,14 @@
-local co = require("santoku.co")
-
-local function tuple ()
-  local co = co()
-
-
-  local function helper (...)
-    co.yield(...)
-    return helper(co.yield(...))
-  end
-  local cor = co.create(helper)
-  return function (...)
-    return select(2, co.resume(cor, ...))
+local function tuple (n, a, ...)
+  if n == 0 then
+    return function () end
+  else 
+    local rest = tuple(n - 1, ...)
+    return function (n)
+      return select(n or 1, a, rest())
+    end
   end
 end
 
-
 return function (...)
-  local active = tuple()
-  local inactive = tuple()
-  active(...)
-  return {
-
-    set = function (...)
-      inactive(active())
-      active(...)
-      return inactive()
-    end,
-
-    get = function (i)
-      active, inactive = inactive, active
-      return select(i or 1, active(inactive()))
-    end
-  }
+  return tuple(select("#", ...), ...)
 end
