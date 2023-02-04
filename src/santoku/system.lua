@@ -20,7 +20,7 @@ M.sh = function (...)
   if ok then
 
 
-    return true, gen.gennil(iter:lines())
+    return true, gen.iter(iter:lines())
   else
     return false, iter, cd
   end
