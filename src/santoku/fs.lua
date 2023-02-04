@@ -167,7 +167,6 @@ M.join = function (...)
   return M.joinwith(M.pathdelim, ...)
 end
 
-
 M.joinwith = function (d, ...)
   local de = str.escape(d)
   local pat = string.format("(%s)*$", de)
