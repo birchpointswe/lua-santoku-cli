@@ -23,6 +23,8 @@
 
 
 
+
+
 local vec = require("santoku.vector")
 local err = require("santoku.err")
 local fun = require("santoku.fun")
@@ -62,38 +64,41 @@ M.gen = function (run, ...)
   })
 end
 
-M.iter = function (fn)
-  return M.gen(function (yield)
+M.iter = function (fn, ...)
+  assert(compat.iscallable(fn))
+  return M.gen(function (yield, ...)
     if yield == compat.noop then
-      while fn() ~= nil do end
+      while fn(...) ~= nil do end
     else
       local val
       while true do
-        val = fn()
-        if val ~= nil then
-          yield(val)
+        val = tup(fn(...))
+        if val() ~= nil then
+          yield(val())
         else
           break
         end
       end
     end
-  end)
+  end, ...)
 end
 
 M.ipairs = function(t)
   assert(type(t) == "table")
-  return M.genco(function (co)
+  return M.gen(function (yield)
     for k, v in ipairs(t) do
-      co.yield(k, v)
+      yield(k, v)
     end
   end)
 end
 
 M.pairs = function(t)
   assert(type(t) == "table")
-  return M.genco(function (co)
+  local k, v
+  local iter, state = pairs(t)
+  return M.gen(function (yield)
     for k, v in pairs(t) do
-      co.yield(k, v)
+      yield(k, v)
     end
   end)
 end
@@ -180,71 +185,90 @@ M.filter = function (gen, fn)
   end)
 end
 
-M.zip = function (opts, ...)
-  local gens
-  if M.isgen(opts) then
-    gens = vec(opts, ...)
-    opts = {}
-  else
-    gens = vec(...)
-  end
-  local mode = opts.mode or "first"
-  assert(mode == "first" or mode == "longest")
-
-
-  return M.genco(function (co)
-    while true do
-      local nb = 0
-      local ret = vec()
-      for i = 1, gens.n do
-        local gen = gens[i]
-        if not gen:done() then
-          nb = nb + 1
-          local val = vec(gen())
-          ret = ret:append(val)
-        elseif i == 1 and mode == "first" then
-          return
-        else
-          ret = ret:append(vec())
-        end
-      end
-      if nb == 0 then
-        break
-      else
-        co.yield(ret:unpack())
-      end
-    end
-  end)
-end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 M.find = function (gen, ...)
   assert(M.isgen(gen))
   return gen:filter(...):head()
 end
 
-M.pick = function (gen, n)
+M.tabulate = function (gen, opts, ...)
   assert(M.isgen(gen))
-  return gen:slice(n, 1):head()
+  local keys, nkeys
+  if type(opts) == "table" then
+    keys, nkeys = tup(...)
+  else
+    keys, nkeys = tup(opts, ...)
+    opts = {}
+  end
+  local rest = opts.rest
+  local ret = {}
+  gen:index():each(function (idx, v)
+    if idx >= nkeys then
+      ret[select(idx, keys())] = v
+    else
+
+    end
+  end)
+
+
+
+
+  return ret
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+M.take = function (gen, n)
+  assert(M.isgen(gen))
+  assert(n == nil or type(n) == "number")
+  if n == nil then
+    return gen:clone()
+  else
+    return M.gen(function (yield)
+      return gen:each(function (...)
+        if n > 0 then
+          n = n - 1
+          return yield(...)
+        else
+
+
+        end
+      end)
+    end)
+  end
 end
 
 M.slice = function (gen, start, num)
@@ -260,53 +284,33 @@ M.each = function (gen, fn, ...)
   return gen.run(fn, ...)
 end
 
-M.tabulate = function (gen, opts, ...)
-  assert(M.isgen(gen))
-  local keys
-  if type(opts) == "table" then
-    keys = M.args(...)
-  else
-    keys = M.args(opts, ...)
-    opts = {}
-  end
-  local rest = opts.rest
-  local t = keys:zip(gen):reduce(function (a, k, v)
-    a[k[1]] = v[1]
-    return a
-  end, {})
-  if rest then
-    t[rest] = gen:vec()
-  end
-  return t
-end
-
 M.chain = function (...)
   return M.flatten(M.args(...))
 end
 
 M.paster = function (gen, ...)
-  local args = vec(...)
+  local args = tup(...)
   return gen:map(function (...)
-    return vec(...):extend(args):unpack()
+    return tup(...)(args())
   end)
 end
 
 M.pastel = function (gen, ...)
-  local args = vec(...)
+  local args = tup(...)
   return gen:map(function (...)
-    return vec():extend(args):append(...):unpack()
+    return args(...)
   end)
 end
 
 M.empty = function ()
-  return M.gennil(function () return end)
+  return M.gen(function () end)
 end
 
 M.flatten = function (gengen)
   assert(M.isgen(gengen))
-  return M.genco(function (co)
-    gengen:each(function (gen)
-      gen:each(co.yield)
+  return M.gen(function (yield)
+    return gengen:each(function (gen)
+      return gen:each(yield)
     end)
   end)
 end
@@ -327,16 +331,6 @@ M.chunk = function (gen, n)
     if chunk.n > 0 then
       yield(chunk)
     end
-  end)
-end
-
-
-
-
-M.unlazy = function (gen, n)
-  assert(M.isgen(gen))
-  return M.genco(function (co)
-    gen:take(n):vec():each(co.yield)
   end)
 end
 
@@ -369,6 +363,11 @@ M.tup = function (gen)
       return (tup(t((tup(...)))))
     end
   end, (tup()))
+end
+
+M.unpack = function (gen)
+  assert(M.isgen(gen))
+  return gen:tup()()
 end
 
 
@@ -413,14 +412,7 @@ end
 
 
 
-M.last = function (gen)
-  assert(M.isgen(gen))
-  local last = tup()
-  gen:each(function (...)
-    last = tup(...)
-  end)
-  return last()
-end
+
 
 
 

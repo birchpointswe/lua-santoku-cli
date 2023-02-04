@@ -10,130 +10,65 @@ local vec = require("santoku.vector")
 
 describe("santoku.gen", function ()
 
+  describe("gen", function ()
 
+    it("should create a generator", function ()
 
+      local vals = gen(function (yield)
+        yield(1)
+        yield(2)
+      end)
 
+      local called = 0
+      vals:index():each(function (idx, i)
+        called = called + 1
+        assert(idx == i)
+      end)
 
+      assert(called == 2)
 
+    end)
 
+    it("shouldnt call the callback if empty", function ()
 
+      local vals = gen()
 
+      local called = 0
 
+      vals:each(function ()
+        called = called + 1
+      end)
 
+      assert(called == 0)
 
+    end)
 
+    it("allows for early exit", function ()
 
+      local gen = gen.args(1, 2, 3)
+      local two = gen:take(2)
 
+      assert.same(vec(1, 2), two:vec())
+      assert.same(vec(3), gen:vec())
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  describe("chunk", function ()
-
-    it("takes n items from a generator", function ()
-      local vals = gen.args(1, 2, 3):chunk(2):tup()
-      local a, b = vals()
-      assert.same(a, { 1, 2, n = 2 })
-      assert.same(b, { 3, n = 1 })
     end)
 
   end)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
