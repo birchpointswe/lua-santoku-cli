@@ -26,10 +26,8 @@
 
 
 local vec = require("santoku.vector")
-local err = require("santoku.err")
 local fun = require("santoku.fun")
 local compat = require("santoku.compat")
-local op = require("santoku.op")
 local tup = require("santoku.tuple")
 
 local M = {}
@@ -101,8 +99,6 @@ end
 
 M.pairs = function(t)
   assert(type(t) == "table")
-  local k, v
-  local iter, state = pairs(t)
   return M.gen(function (yield)
     for k, v in pairs(t) do
       yield(k, v)
@@ -112,7 +108,7 @@ end
 
 
 
-M.args = function (...)
+M.pack = function (...)
   return M.gen(function (yield, ...)
     for i = 1, select("#", ...) do
       yield((select(i, ...)))
@@ -153,7 +149,7 @@ end
 
 M.map = function (gen, fn)
   assert(M.isgen(gen))
-  fn = fn or fun.id
+  fn = fn or compat.id
   return M.gen(function (yield)
     return gen:each(function (...)
       return yield(fn(...))
@@ -170,7 +166,7 @@ M.reduce = function (gen, acc, ...)
     if not ready and m == 0 then
       ready = true
       val = tup(...)
-      return 
+      return
     elseif not ready then
       ready = true
     end
@@ -192,100 +188,8 @@ M.filter = function (gen, fn)
   end)
 end
 
-M.find = function (gen, ...)
-  assert(M.isgen(gen))
-  return gen:filter(...):head()
-end
-
-M.tabulate = function (gen, opts, ...)
-  assert(M.isgen(gen))
-  local keys, nkeys
-  if type(opts) == "table" then
-    keys, nkeys = tup(...)
-  else
-    keys, nkeys = tup(opts, ...)
-    opts = {}
-  end
-  local rest = opts.rest
-  local ret = {}
-  gen:index():each(function (idx, v)
-    if idx >= nkeys then
-      ret[select(idx, keys())] = v
-    else
-
-    end
-  end)
-
-
-
-
-  return ret
-end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-M.take = function (gen, n)
-  assert(M.isgen(gen))
-  assert(n == nil or type(n) == "number")
-  if n == nil then
-    return gen:clone()
-  else
-    return M.gen(function (yield)
-      return gen:each(function (...)
-        if n > 0 then
-          n = n - 1
-          return yield(...)
-        else
-
-
-        end
-      end)
-    end)
-  end
-end
-
-M.slice = function (gen, start, num)
-  assert(M.isgen(gen))
-  gen:take((start or 1) - 1):discard()
-  return gen:take(num)
-end
-
 M.chain = function (...)
-  return M.flatten(M.args(...))
+  return M.flatten(M.pack(...))
 end
 
 M.paster = function (gen, ...)
@@ -372,28 +276,12 @@ end
 
 
 
-
-
-
-
-
-
-
-M.equals = function (...)
-  local vals = M.zip({ mode = "longest" }, ...):map(vec.equals):all()
-  return vals and M.args(...):map(M.done):all()
-end
-
-
-
 M.all = function (gen)
   assert(M.isgen(gen))
   return gen:reduce(function (a, n)
     return a and n
   end, true)
 end
-
-M.none = fun.compose(op["not"], M.find)
 
 M.max = function (gen, ...)
   assert(M.isgen(gen))
@@ -406,21 +294,14 @@ M.max = function (gen, ...)
   end, ...)
 end
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+M.last = function (gen)
+  assert(M.isgen(gen))
+  local last = tup()
+  gen:each(function (...)
+    last = tup(...)
+  end)
+  return last()
+end
 
 return setmetatable({}, {
   __index = M,
