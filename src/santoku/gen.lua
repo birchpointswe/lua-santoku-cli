@@ -35,9 +35,9 @@ local M = {}
 
 M.isgen = function (t)
   if type(t) ~= "table" then
-    return false
+    return false, "not a generator: not a table", t
   end
-  return (getmetatable(t) or {}).__index == M
+  return (getmetatable(t) or {}).__index == M, "not a generator", t
 end
 
 
