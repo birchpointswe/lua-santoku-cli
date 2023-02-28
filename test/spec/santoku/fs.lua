@@ -104,4 +104,18 @@ describe("santoku.fs", function ()
 
   end)
 
+  describe("absolute", function ()
+
+
+
+
+    it("should return the abolute path of a file", function ()
+
+
+
+
+    end)
+
+  end)
+
 end)
