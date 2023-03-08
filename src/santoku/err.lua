@@ -1,6 +1,32 @@
 local tup = require("santoku.tuple")
-local compat = require("santoku.compat")
 local co = require("santoku.co")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -97,7 +123,7 @@ M.pwrap = function (run, onErr)
     if status == "dead" then
       break
     elseif status == "suspended" then
-      nxt = tup(onErr(select(2, ret)))
+      nxt = tup(onErr(select(2, ret())))
       if not nxt() then
         ret = nxt
         break
