@@ -67,4 +67,25 @@ M.iscallable = function (f)
   end
 end
 
+M.load = function (code, env)
+  if setfenv and loadstring then
+    local f, err, cd = loadstring(code)
+    if not f then
+
+      return false, err, cd
+    else
+
+      setfenv(f, env)
+      return true, f
+    end
+  else
+    local f, err, cd = load(code, nil, "t", env)
+    if not f then
+      return false, err, cd
+    else
+      return true, f
+    end
+  end
+end
+
 return M
