@@ -74,8 +74,10 @@ M.load = function (code, env)
 
       return false, err, cd
     else
+      if env then
 
-      setfenv(f, env)
+        setfenv(f, env)
+      end
       return true, f
     end
   else
