@@ -110,6 +110,25 @@ M.equals = function (a, ...)
   return true
 end
 
+M.merge = function (t, ...)
+  assert(type(t) == "table")
+  for i = 1, select("#", ...) do
+    local t0 = select(i, ...)
+    for k, v in pairs(t0) do
+      if t[k] ~= nil and type(t[k]) ~= "table" then -- luacheck: ignore 
+
+      elseif type(v) == "table" then
+        t[k] = t[k] or {}
+        M.merge(t[k], v)
+      else
+        t[k] = v
+      end
+    end
+  end
+  return t
+end
+
+
 local paths
 paths = function (t, fn, stop, ...)
   for k, v in pairs(t) do
@@ -129,6 +148,7 @@ M.paths = function (t, fn, stop)
   assert(compat.iscallable(fn))
   return paths(t, fn, stop)
 end
+
 
 
 

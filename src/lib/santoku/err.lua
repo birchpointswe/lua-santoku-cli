@@ -48,6 +48,18 @@ local co = require("santoku.co")
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 local M = {}
 
 M.unimplemented = function (msg)
@@ -131,6 +143,14 @@ M.pwrap = function (run, onErr)
     end
   end
   return ret()
+end
+
+M.check = function (ok, a, ...)
+  if not ok then 
+    error(a)
+  else
+    return a, ...
+  end
 end
 
 return M

@@ -318,4 +318,13 @@ M.loadfile = function (fp, env)
   end
 end
 
+M.runfile = function (fp, env)
+  local ok, fn, cd = M.loadfile(fp, env)
+  if not ok then
+    return false, fn, cd
+  else
+    return pcall(fn)
+  end
+end
+
 return M
