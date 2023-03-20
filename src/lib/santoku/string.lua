@@ -144,7 +144,35 @@ end
 
 
 M.trim = function (s, opts)
-  M.unimplemented("trim")
+  local left = "%s*"
+  local right = "%s*"
+  if opts == nil then
+    -- luacheck: ignore
+
+  elseif type(opts) == "string" then
+    left = opts
+    right = opts
+  elseif type(opts) == "table" then
+    left = opts.left or left
+    right = opts.right or right
+  else
+    error("unexpected options argument: " .. type(opts))
+  end
+  if left ~= false then
+    s = s:replace("^" .. left, "")
+  end
+  if right ~= false then
+    s = s:replace(right  .. "$", "")
+  end
+  return s
+end
+
+M.isempty = function (s)
+  if s:match("^%s*$") then
+    return true
+  else 
+    return false
+  end
 end
 
 M.endswith = function (str, pat)
