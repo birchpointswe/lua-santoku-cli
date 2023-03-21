@@ -113,7 +113,28 @@ describe("template", function ()
         data-api="/api/ping"
         data-method="get"
 data-handler-403="redirect:/login">
-      </template>]], str)
+      </template>
+    ]], str)
+  end)
+
+
+  it("should allow multiple compile-time functions", function ()
+    local ok, tpl = template([[
+      <%compile% return title %>
+      <%compile% return name %>
+      <% return "!" %>
+    ]], {
+      env = {
+        title = "Hello",
+        name = "World"
+      }
+    })
+    assert(ok, tpl)
+    local ok, str = tpl:render()
+    assert(ok, str)
+    assert.same([[
+      HelloWorld!
+    ]], str)
   end)
 
 end)
