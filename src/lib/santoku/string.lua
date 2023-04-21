@@ -105,11 +105,11 @@ M.printf = function (s, ...)
   return io.write(s:format(...))
 end
 
-
-
 M.printi = function (s, t)
   return print(M.interp(s, t))
 end
+
+
 
 
 
