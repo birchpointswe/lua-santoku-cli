@@ -27,6 +27,11 @@
 
 
 
+
+
+
+
+
 local tbl = require("santoku.table")
 local vec = require("santoku.vector")
 local fun = require("santoku.fun")
@@ -246,6 +251,21 @@ M.pastel = function (gen, ...)
   local args = tup(...)
   return gen:map(function (...)
     return args(...)
+  end)
+end
+
+M.intersperse = function (gen, ...)
+  assert(M.isgen(gen))
+  local args = tup(...)
+  local isfirst = true
+  return M.gen(function (yield)
+    return gen:each(function (...)
+      if not isfirst then
+        yield(args())
+      end
+      yield(...)
+      isfirst = false
+    end)
   end)
 end
 
