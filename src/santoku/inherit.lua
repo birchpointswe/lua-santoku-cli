@@ -9,7 +9,7 @@ local M = {}
 
 
 
-M.mergeindex = function (t, i)
+M.mergeindex = function (t, i) -- luacheck: ignore
   error("mergeindex: unimplemented")
 end
 

@@ -37,6 +37,26 @@ M.attr = function (fp, attr)
   end
 end
 
+
+M.isdir = function (fp)
+  local mode, err, code = lfs.attributes(fp, "mode")
+  if not mode then
+    return false, err, code
+  else
+    return true, mode == "directory"
+  end
+end
+
+
+M.isfile = function (fp)
+  local mode, err, code = lfs.attributes(fp, "mode")
+  if not mode then
+    return false, err, code
+  else
+    return true, mode == "file"
+  end
+end
+
 M.exists = function (fp)
   local mode, err, code = lfs.attributes(fp, "mode")
   if mode == nil and code == 2 then
