@@ -32,6 +32,8 @@
 
 
 
+
+
 local tbl = require("santoku.table")
 local vec = require("santoku.vector")
 local fun = require("santoku.fun")
@@ -396,6 +398,14 @@ M.find = function (gen, fn, ...)
       return gen.val()
     end
   end
+end
+
+M.set = function (gen)
+  assert(M.isgen(gen))
+  return gen:reduce(function (s, v)
+    s[v] = true
+    return s
+  end, {})
 end
 
 M.tabulate = function (gen, opts, ...)
