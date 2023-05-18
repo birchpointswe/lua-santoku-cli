@@ -201,7 +201,9 @@ end
 
 M.joinwith = function (d, ...)
   local de = str.escape(d)
-  local pat = string.format("(%s)*$", de)
+
+
+  local pat = string.format("%s*$", de)
   local clean = fun.bindl(tup.map, fun.bindr(string.gsub, pat, ""))
   local filter = fun.bindl(tup.filter, compat.id)
   local interleave = fun.bindl(tup.interleave, d)
