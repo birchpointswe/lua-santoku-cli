@@ -6,7 +6,6 @@
 
 
 
-
 local err = require("santoku.err")
 local vec = require("santoku.vector")
 
