@@ -7,6 +7,22 @@ M.distance = function (one, two)
 end
 
 
+
+
+M.earth_stereo = function (point, origin)
+  local p = -1
+  local R = 3671
+  local lat1, lon1 = math.rad(origin.lat), math.rad(origin.lon)
+  local lat2, lon2 = math.rad(point.lat), math.rad(point.lon)
+  local cosc2 = math.sin(lat1) * math.sin(lat2) + math.cos(lat1) * math.cos(lat2) * math.cos(lon2 - lon1)
+  local k2 = (p - 1) / (p - cosc2)
+  return {
+    x = R * k2 * math.cos(lat2) * math.sin(lon2 - lon1),
+    y = R * k2 * (math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(lon2 - lon1))
+  }
+end
+
+
 M.earth_distance = function (one, two)
   local earth_radius = 6371
   local d_lat = math.rad(two.lat - one.lat)
