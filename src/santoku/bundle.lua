@@ -51,7 +51,8 @@ parsemodules = function (check, infile, modules, ignores, path, cpath)
 
 
 
-      if line:match("^%s*%-%-") or line:match("\"[^\"]*require[^\"]*\"") then
+
+      if line:match("^%s*%-%-") then
         return gen.empty()
       else
 
