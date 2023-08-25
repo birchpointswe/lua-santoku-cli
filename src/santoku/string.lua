@@ -216,6 +216,12 @@ M.startswith = function (str, pat)
   end
 end
 
+M.stripprefix = function (str, pfx)
+  local pfxlen = pfx:len()
+  local strlen = str:len()
+  return str:sub(pfxlen + 1, strlen)
+end
+
 
 
 M.commonprefix = function (...)
