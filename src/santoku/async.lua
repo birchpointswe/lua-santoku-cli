@@ -1,5 +1,6 @@
 
 
+
 local gen = require("santoku.gen")
 local compat = require("santoku.compat")
 local tup = require("santoku.tuple")
