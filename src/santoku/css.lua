@@ -1,6 +1,8 @@
 
 
 
+
+
 local vec = require("santoku.vector")
 
 local function entity_mt (result)

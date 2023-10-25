@@ -129,6 +129,12 @@ M.istype = setmetatable({}, {
 
 
 M.hasmeta = setmetatable({}, {
+
+  __call = function (_, k, v)
+    local m = getmetatable(k)
+    return m ~= nil and m == v
+  end,
+
   __index = function (_, k)
     k = "__" .. k
     return function (o)
