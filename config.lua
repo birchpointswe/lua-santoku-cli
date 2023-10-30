@@ -1,7 +1,7 @@
 local _ENV = {}
 
 name = "santoku-cli"
-version = "0.0.96-1"
+version = "0.0.98-1"
 variable_prefix = "TK_CLI"
 
 license = "MIT"
@@ -12,7 +12,7 @@ luacov_include = {
 
 dependencies = {
   "lua >= 5.1",
-  "santoku >= 0.0.97-1",
+  "santoku >= 0.0.98-1",
   "luafilesystem >= 1.8.0-1",
 }
 
