@@ -1,8 +1,8 @@
 local _ENV = {}
 
-name = "santoku"
+name = "santoku-cli"
 version = "0.0.94-1"
-variable_prefix = "TK"
+variable_prefix = "TK_CLI"
 
 license = "MIT"
 
@@ -10,34 +10,17 @@ luacov_include = {
   "^%./santoku.*"
 }
 
-
-
-
-
-
-
-
 dependencies = {
-
   "lua >= 5.1",
-
-
-
-
-
-
-
-
+  "santoku >= 0.0.97-1",
+  "luafilesystem >= 1.8.0-1",
 }
 
 test_dependencies = {
   "luacov >= 0.15.0",
   "luacheck >= 1.1.0-1",
-  "lua-zlib >= 1.2-2",
-  "luafilesystem >= 1.8.0-1",
-  "lsqlite3 >= 0.9.5",
   "inspect >= 3.1.3-0",
-  "luassert >= 1.9.0-1"
+  "luassert >= 1.9.0-1",
 }
 
 homepage = "https://github.com/treadwelllane/lua-" .. name
@@ -47,8 +30,6 @@ download = homepage .. "/releases/download/" .. version .. "/" .. tarball
 return {
   env = _ENV,
   excludes = {
-    "src/santoku/template.lua",
-    "test/spec/santoku/template.lua",
     "test/spec/santoku/cli/template.lua"
   },
 }
