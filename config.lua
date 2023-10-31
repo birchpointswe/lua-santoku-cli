@@ -3,8 +3,8 @@ local _ENV = {}
 name = "santoku-cli"
 version = "0.0.100-1"
 variable_prefix = "TK_CLI"
-
 license = "MIT"
+public = true
 
 dependencies = {
   "lua >= 5.1",
