@@ -1,6 +1,7 @@
 local assert = require("luassert")
 local test = require("santoku.test")
 local sys = require("santoku.system")
+local err = require("santoku.err")
 
 test("santoku-cli", function ()
 
@@ -8,9 +9,10 @@ test("santoku-cli", function ()
 
     test("should allow stdin/stdout processing", function ()
       local toku = os.getenv("LUA") .. " -l luacov bin/toku.lua"
-      local ok, gen = sys.sh("echo '<% return \"hello\" %>' | ", toku, " template -f - -o -")
+      local cmd = "echo '<% return \"hello\" %>' | " .. toku .. " template -f - -o -"
+      local ok, gen = sys.sh("sh", "-c", cmd)
       assert.equals(true, ok, gen)
-      assert.equals("hello", gen:co():head())
+      assert.equals("hello", gen:map(err.check):co():head())
     end)
 
   end)
