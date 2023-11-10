@@ -1,7 +1,7 @@
 local env = {
 
   name = "santoku-cli",
-  version = "0.0.108-1",
+  version = "0.0.109-1",
   variable_prefix = "TK_CLI",
   license = "MIT",
   public = true,
@@ -9,7 +9,7 @@ local env = {
   dependencies = {
     "lua >= 5.1",
     "santoku >= 0.0.119-1",
-    "luafilesystem >= 1.8.0-1",
+    "luaposix >= 36.2.1-1",
     "argparse >= 0.7.1-1",
   },
 
@@ -18,7 +18,7 @@ local env = {
     "luacheck >= 1.1.0-1",
     "inspect >= 3.1.3-0",
     "luassert >= 1.9.0-1",
-    "luaposix >= 36.2.1-1"
+    "luaposix >= 36.2.1-1",
   },
 
 }
