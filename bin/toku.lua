@@ -137,10 +137,12 @@ ctest
 local args = parser:parse()
 
 
-local function write_deps (check, deps, input, output, fp_config)
+local function write_deps (check, deps, input, output, configs)
   local depsfile = output .. ".d"
   local out = gen.chain(
-      gen.pack(output, ": ", fp_config),
+      gen.pack(output, ": "),
+      gen.ivals(configs):intersperse(" "),
+      gen.pack(" "),
       gen.ivals(deps):intersperse(" "),
       gen.pack("\n", depsfile, ": ", input, "\n"))
     :vec()
@@ -149,7 +151,7 @@ local function write_deps (check, deps, input, output, fp_config)
 end
 
 
-local function process_file (check, conf, input, output, deps, fp_config)
+local function process_file (check, conf, input, output, deps, configs)
   local data = check(fs.readfile(input == "-" and io.stdin or input))
   local tmpl, out
   if tpl._should_include(fs.extension(input), input, conf) then
@@ -161,17 +163,17 @@ local function process_file (check, conf, input, output, deps, fp_config)
   check(fs.mkdirp(fs.dirname(output)))
   check(fs.writefile(output == "-" and io.stdout or output, out))
   if deps and tmpl then
-    write_deps(check, tmpl.deps, input, output, fp_config)
+    write_deps(check, tmpl.deps, input, output, configs)
   end
 end
 
 
-local function process_files (check, conf, trim, input, mode, output, deps, fp_config)
+local function process_files (check, conf, trim, input, mode, output, deps, configs)
   if mode == "directory" then
     fs.files(input, { recurse = true })
       :map(check)
       :each(function (fp, mode)
-        process_files(check, conf, trim, fp, mode, output, deps, fp_config)
+        process_files(check, conf, trim, fp, mode, output, deps, configs)
       end)
   elseif mode == "file" then
     local trimlen = trim and string.len(trim)
@@ -180,7 +182,7 @@ local function process_files (check, conf, trim, input, mode, output, deps, fp_c
       outfile = outfile:sub(trimlen + 1)
     end
     output = fs.join(output, outfile)
-    process_file(check, conf, input, output, deps, fp_config)
+    process_file(check, conf, input, output, deps, configs)
   else
     error("Unexpected mode: " .. mode .. " for file: " .. input)
   end
