@@ -7,6 +7,7 @@ local test = require("santoku.test")
 local err = require("santoku.err")
 local fs = require("santoku.fs")
 local tpl = require("santoku.template")
+local tbl = require("santoku.table")
 local bundle = require("santoku.bundle")
 
 local parser = argparse()
@@ -110,7 +111,7 @@ ctemplate
 ctemplate
   :option("-c --config", "a configuration file")
   :args(1)
-  :count("0-1")
+  :count("*")
 
 local ctest = parser
   :command("test", "run tests")
@@ -186,9 +187,11 @@ local function process_files (check, conf, trim, input, mode, output, deps, fp_c
 end
 
 
-local function get_config (check, config)
+local function get_config (check, configs)
   local lenv = inherit.pushindex({}, _G)
-  local cfg = config and check(fs.loadfile(config, lenv))() or {}
+  local cfg = tbl.merge({}, gen.ivals(configs):map(function (config)
+    return check(fs.loadfile(config, lenv))() or {}
+  end):vec():unpack())
   cfg.env = inherit.pushindex(cfg.env or {}, _G)
   return cfg
 end
