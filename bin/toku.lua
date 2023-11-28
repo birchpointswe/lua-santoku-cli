@@ -141,9 +141,9 @@ local function write_deps (check, deps, input, output, configs)
   local depsfile = output .. ".d"
   local out = gen.chain(
       gen.pack(output, ": "),
-      gen.ivals(configs):intersperse(" "),
+      gen.ivals(configs):interleave(" "),
       gen.pack(" "),
-      gen.ivals(deps):intersperse(" "),
+      gen.ivals(deps):interleave(" "),
       gen.pack("\n", depsfile, ": ", input, "\n"))
     :vec()
     :concat()
