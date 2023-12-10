@@ -1,5 +1,7 @@
 # Now
 
+- Readline-supported REPL
+- Html parser
 - Bundle tree shaking
 - sys.sh/sys.execute allow capturing stderr via redirect to temporary file or
   similar
