@@ -248,7 +248,7 @@ assert(err.pwrap(function (check)
     check(bundle(args.input, args.output_directory, {
       env = args.env,
       mods = args.mod,
-      flags = flags
+      flags = flags,
       deps = args.deps,
       depstarget = args.deps_target,
       ignores = args.ignore,
