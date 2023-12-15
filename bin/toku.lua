@@ -257,6 +257,7 @@ assert(err.pwrap(function (check)
       depstarget = args.deps_target,
       ignores = args.ignore,
       outprefix = args.output_prefix,
+      cc = args.cc,
       close = not args.noclose,
       luac = luac,
       xxd = args.xxd
