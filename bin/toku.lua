@@ -253,6 +253,8 @@ assert(err.pwrap(function (check)
       env = args.env,
       mods = args.mod,
       flags = flags,
+      path = args.path,
+      cpath = args.cpath,
       deps = args.deps,
       depstarget = args.deps_target,
       ignores = args.ignore,
