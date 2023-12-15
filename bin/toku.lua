@@ -3,6 +3,8 @@
 local argparse = require("argparse")
 local inherit = require("santoku.inherit")
 local gen = require("santoku.gen")
+local vec = require("santoku.vector")
+local str = require("santoku.string")
 local test = require("santoku.test")
 local err = require("santoku.err")
 local fs = require("santoku.fs")
@@ -18,66 +20,82 @@ local cbundle = parser
   :command("bundle", "create standalone executables")
 
 cbundle
-  :option("-e --env", "set an environment variable that applies only for the compilation step")
+  :option("--env", "set an environment variable that applies only at runtime")
   :args(2)
   :count("*")
 
 cbundle
-  :option("--cflags", "set command-line CFLAGS")
-  :args(1)
-  :count("0-1")
-
-cbundle
-  :option("--ldflags", "set command-line LDFLAGS")
-  :args(1)
-  :count("0-1")
-
-cbundle
-  :option("-E --cmpenv", "set an environment variable that applies only at runtime")
-  :args(2)
-  :count("*")
-
-cbundle
-  :flag("-L --noluac", "do not first compile lua code with luac")
-  :count("0-1")
-
-cbundle
-  :option("-l --load", "load a module during startup")
+  :option("--mod", "load a module during startup")
   :args(1)
   :count("*")
 
 cbundle
-  :option("-i --ignore", "ignore bundling a module")
+  :option("--flags", "set compile command-line flags")
+  :args(1)
+  :count("*")
+
+cbundle:mutex(
+  cbundle
+    :option("--luac", "set luac command string")
+    :args(1)
+    :count("0-1"),
+  cbundle
+    :flag("--luac-off", "disable the luac stop")
+    :count("0-1"),
+  cbundle
+    :flag("--luac-default", "use the default luac command (e.g. luac -s -o %output %input)")
+    :count("0-1"))
+
+cbundle
+  :option("--xxd", "set xxd command string (e.g. xxd -i -n data)")
+  :count("0-1")
+
+cbundle
+  :option("--cc", "set the compiler")
+  :count("0-1")
+
+cbundle
+  :option("--ignore", "ignore bundling a module")
   :args(1)
   :count("*")
 
 cbundle
-  :flag("-C --noclose", "don't call lua_close(...)")
+  :flag("--no-close", "don't call lua_close(...)")
   :count("0-1")
 
 cbundle
-  :option("-f --file", "input file")
+  :option("--input", "input file")
   :args(1)
   :count(1)
 
 cbundle
-  :flag("-M --deps", "generate a make .d file")
+  :flag("--deps", "generate a make .d file")
   :count("0-1")
 
 cbundle
-  :flag("-m --depstarget", "override dependency target file")
+  :option("--deps-target", "override dependency target file")
   :args(1)
   :count("0-1")
 
 cbundle
-  :option("-o --output", "output directory")
+  :option("--output-directory", "output directory")
   :args(1)
   :count(1)
 
 cbundle
-  :option("-O --outputname", "output name prefix")
+  :option("--output-prefix", "output name prefix")
   :args(1)
   :count("0-1")
+
+cbundle
+  :option("--path", "LUA_PATH")
+  :args(1)
+  :count(1)
+
+cbundle
+  :option("--cpath", "LUA_CPATH")
+  :args(1)
+  :count(1)
 
 local ctemplate = parser
   :command("template", "process templates")
@@ -214,11 +232,31 @@ assert(err.pwrap(function (check)
       parser:error("either -f --file or -d --directory must be provided")
     end
   elseif args.bundle then
-    check(bundle(
-      args.file, args.output, args.outputname,
-      args.env, args.cflags, args.ldflags, args.cmpenv,
-      args.deps, args.depstarget, args.load, args.ignore,
-      args.noclose, args.noluac))
+
+    local luac = nil
+
+    if args.luac then
+      luac = args.luac
+    elseif args.luac_off then
+      luac = false
+    elseif args.luac_default then
+      luac = true
+    end
+
+    local flags = args.flags and gen.ivals(args.flags):map(str.split):map(gen.ivals):flatten():vec() or vec(),
+
+    check(bundle(args.input, args.output_directory, {
+      env = args.env,
+      mods = args.mod,
+      flags = flags
+      deps = args.deps,
+      depstarget = args.deps_target,
+      ignores = args.ignore,
+      outprefix = args.output_prefix,
+      close = not args.noclose,
+      luac = luac,
+      xxd = args.xxd
+    }))
   elseif args.test then
     check(test.runfiles(args.files, args.interp, args.match, args.stop))
   else
