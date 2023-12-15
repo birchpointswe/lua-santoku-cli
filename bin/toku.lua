@@ -243,7 +243,11 @@ assert(err.pwrap(function (check)
       luac = true
     end
 
-    local flags = args.flags and gen.ivals(args.flags):map(str.split):map(gen.ivals):flatten():vec() or vec()
+    local flags = args.flags and gen.ivals(args.flags)
+      :map(str.split):map(gen.ivals):flatten()
+      :filter(function (s)
+        return not str.isempty(s)
+      end):vec() or vec()
 
     check(bundle(args.input, args.output_directory, {
       env = args.env,
