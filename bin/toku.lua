@@ -5,7 +5,7 @@ local inherit = require("santoku.inherit")
 local gen = require("santoku.gen")
 local vec = require("santoku.vector")
 local str = require("santoku.string")
-local test = require("santoku.test")
+local testrunner = require("santoku.test.runner")
 local err = require("santoku.err")
 local fs = require("santoku.fs")
 local tpl = require("santoku.template")
@@ -265,7 +265,7 @@ assert(err.pwrap(function (check)
       xxd = args.xxd
     }))
   elseif args.test then
-    check(test.runfiles(args.files, args.interp, args.match, args.stop))
+    check(testrunner.run(args.files, args.interp, args.match, args.stop))
   else
 
     error("This is a bug")
