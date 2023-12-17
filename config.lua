@@ -10,10 +10,10 @@ local env = {
     "lua >= 5.1",
     "santoku >= 0.0.148-1",
     "santoku-fs >= 0.0.6-1",
-    "santoku-template >= 0.0.3-1",
-    "santoku-bundle >= 0.0.8-1",
+    "santoku-template >= 0.0.4-1",
+    "santoku-bundle >= 0.0.9-1",
     "santoku-system >= 0.0.3-1",
-    "santoku-test-runner >= 0.0.3-1",
+    "santoku-test-runner >= 0.0.4-1",
     "argparse >= 0.7.1-1",
   },
 
