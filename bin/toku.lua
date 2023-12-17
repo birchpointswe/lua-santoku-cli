@@ -60,6 +60,10 @@ cbundle
   :count("*")
 
 cbundle
+  :flag("--debug", "enable the debug library")
+  :count("0-1")
+
+cbundle
   :flag("--no-close", "don't call lua_close(...)")
   :count("0-1")
 
@@ -259,6 +263,7 @@ assert(err.pwrap(function (check)
       depstarget = args.deps_target,
       ignores = args.ignore,
       outprefix = args.output_prefix,
+      debug = args.debug,
       cc = args.cc,
       close = not args.no_close,
       luac = luac,
