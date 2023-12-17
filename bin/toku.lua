@@ -260,7 +260,7 @@ assert(err.pwrap(function (check)
       ignores = args.ignore,
       outprefix = args.output_prefix,
       cc = args.cc,
-      close = not args.noclose,
+      close = not args.no_close,
       luac = luac,
       xxd = args.xxd
     }))
