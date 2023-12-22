@@ -265,7 +265,7 @@ assert(err.pwrap(function (check)
       xxd = args.xxd
     }))
   elseif args.test then
-    check(testrunner.run(args.files, args.interp, args.match, args.stop))
+    check(testrunner.run(args.files, args))
   else
 
     error("This is a bug")
