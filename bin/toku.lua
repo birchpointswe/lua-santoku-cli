@@ -336,13 +336,13 @@ err.check(err.pwrap(function (check)
       check(m:iterate())
     elseif args.test then
       check(m:test())
-    elseif m.type == "lib" and args.release then
+    elseif m.config.type == "lib" and args.release then
       check(m:release())
-    elseif m.type == "lib" and args.install then
+    elseif m.config.type == "lib" and args.install then
       check(m:install())
-    elseif m.type == "web" and args.start then
+    elseif m.config.type == "web" and args.start then
       check(m:start())
-    elseif m.type == "web" and args.stop then
+    elseif m.config.type == "web" and args.stop then
       check(m:stop())
     else
       check(false, "command not supported for this type of project")
