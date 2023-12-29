@@ -196,6 +196,9 @@ local cmake_release = cmake
 
 add_cmake_dir_args(cmake_release)
 
+cmake
+  :command("install", "install the project")
+
 local args = parser:parse()
 
 
