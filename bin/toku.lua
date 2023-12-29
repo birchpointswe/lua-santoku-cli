@@ -11,10 +11,13 @@ local fs = require("santoku.fs")
 local tpl = require("santoku.template")
 local tbl = require("santoku.table")
 local bundle = require("santoku.bundle")
+local make = require("santoku.make.project")
 
 local parser = argparse()
   :name("toku")
   :description("A command lind interface to the santoku lua library")
+
+parser:command_target("command")
 
 local cbundle = parser
   :command("bundle", "create standalone executables")
@@ -152,6 +155,47 @@ ctest
   :argument("files")
   :args("*")
 
+local function add_cmake_dir_args (cmd)
+  cmd
+    :option("--dir", "top-level build directory")
+    :count("0-1")
+  cmd
+    :option("--env", "environment and build sub-directory")
+    :count("0-1")
+  cmd
+    :option("--config", "config file to use")
+    :count("0-1")
+end
+
+local cmake = parser
+  :command("make", "manage lua projects")
+
+local cmake_init = cmake
+  :command("init", "initialize a new project")
+
+cmake_init:mutex(
+  cmake_init:flag("--web", "initialize a web project"),
+  cmake_init:flag("--lib", "initialize a lib project"))
+
+local cmake_test = cmake
+  :command("test", "run projet tests")
+
+add_cmake_dir_args(cmake_test)
+
+cmake_test
+  :flag("--iterate", "iteratively run tests")
+
+cmake_test
+  :flag("--wasm", "run in WASM mode")
+
+cmake_test
+  :flag("--profile", "report the performance profile")
+
+local cmake_release = cmake
+  :command("release", "release the project")
+
+add_cmake_dir_args(cmake_release)
+
 local args = parser:parse()
 
 
@@ -216,22 +260,22 @@ local function get_config (check, configs)
   return cfg
 end
 
-assert(err.pwrap(function (check)
+err.check(err.pwrap(function (check)
 
-  if args.template then
+  if args.command == "template" then
+
     local conf = get_config(check, args.config)
     if args.directory then
       check(fs.mkdirp(args.output))
-      gen.ivals(args.input):each(function (i)
-        local mode = check(fs.attr(i, "mode"))
-        process_files(check, conf, args.trim, i, mode, args.output, args.deps, args.config)
-      end)
+      local mode = check(fs.mode(args.directory))
+      process_files(check, conf, args.trim, args.directory, mode, args.output, args.deps, args.config)
     elseif args.file then
       process_file(check, conf, args.file, args.output, args.deps, args.config)
     else
       parser:error("either -f --file or -d --directory must be provided")
     end
-  elseif args.bundle then
+
+  elseif args.command == "bundle" then
 
     local luac = nil
 
@@ -264,11 +308,48 @@ assert(err.pwrap(function (check)
       luac = luac,
       xxd = args.xxd
     }))
-  elseif args.test then
-    check(testrunner.run(args.files, args))
-  else
 
-    error("This is a bug")
+  elseif args.command == "test" then
+
+    check(testrunner.run(args.files, args))
+
+  elseif args.command == "make" and args.init and args.lib then
+
+    check(make.create_lib())
+
+  elseif args.command == "make" and args.init and args.web then
+
+    check(make.create_web())
+
+  elseif args.command == "make" then
+
+    local m = check(make.init({
+      dir = args.dir,
+      env = args.env,
+      config = args.config,
+      iterate = args.iterate,
+      wasm = args.wasm,
+      profile = args.profile
+    }))
+
+    if args.test and args.iterate then
+      check(m:iterate())
+    elseif args.test then
+      check(m:test())
+    elseif m.type == "lib" and args.release then
+      check(m:release())
+    elseif m.type == "lib" and args.install then
+      check(m:install())
+    elseif m.type == "web" and args.start then
+      check(m:start())
+    elseif m.type == "web" and args.stop then
+      check(m:stop())
+    else
+      check(false, "command not supported for this type of project")
+    end
+
+  else
+    check(false, "invalid command")
   end
 
-end, err.error))
+end))

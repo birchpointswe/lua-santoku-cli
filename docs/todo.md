@@ -1,5 +1,7 @@
 # Now
 
+- Implement cmake_init and cmake_test
+
 - Readline-supported REPL
 - Html parser
 - Bundle tree shaking

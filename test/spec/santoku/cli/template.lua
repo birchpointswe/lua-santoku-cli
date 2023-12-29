@@ -23,7 +23,7 @@ test("santoku-cli", function ()
     test("should support multiple configs", function ()
       local toku = os.getenv("LUA") .. " -l luacov bin/toku.lua"
       local cmd = "echo '<% return a %> <% return b %> <% return c %>' | " ..
-      toku .. " template -c res/tmpl.cfg0.lua -c res/tmpl.cfg1.lua -f - -o -"
+      toku .. " template -c test/res/tmpl.cfg0.lua -c test/res/tmpl.cfg1.lua -f - -o -"
       local ok, gen = sys.sh("sh", "-c", cmd)
       assert(ok == true, gen)
       assert(gen:map(err.check):co():head() == "1 2 3")
