@@ -20,73 +20,73 @@ local parser = argparse()
 parser:command_target("command")
 
 local cbundle = parser
-  :command("bundle", "create standalone executables")
+  :command("bundle", "Create standalone executables")
 
 cbundle
-  :option("--env", "set an environment variable that applies only at runtime")
+  :option("--env", "Set an environment variable that applies only at runtime")
   :args(2)
   :count("*")
 
 cbundle
-  :option("--mod", "load a module during startup")
+  :option("--mod", "Load a module during startup")
   :args(1)
   :count("*")
 
 cbundle
-  :option("--flags", "set compile command-line flags")
+  :option("--flags", "Set compile command-line flags")
   :args(1)
   :count("*")
 
 cbundle:mutex(
   cbundle
-    :option("--luac", "set luac command string")
+    :option("--luac", "Set luac command string")
     :args(1)
     :count("0-1"),
   cbundle
-    :flag("--luac-off", "disable the luac stop")
+    :flag("--luac-off", "Disable the luac step")
     :count("0-1"),
   cbundle
-    :flag("--luac-default", "use the default luac command (e.g. luac -s -o %output %input)")
+    :flag("--luac-default", "Use the default luac command (e.g. luac -s -o %output %input)")
     :count("0-1"))
 
 cbundle
-  :option("--xxd", "set xxd command string (e.g. xxd -i -n data)")
+  :option("--xxd", "Set xxd command string (e.g. xxd -i -n data)")
   :count("0-1")
 
 cbundle
-  :option("--cc", "set the compiler")
+  :option("--cc", "Set the compiler")
   :count("0-1")
 
 cbundle
-  :option("--ignore", "ignore bundling a module")
+  :option("--ignore", "Ignore bundling a module")
   :args(1)
   :count("*")
 
 cbundle
-  :flag("--no-close", "don't call lua_close(...)")
+  :flag("--no-close", "Don't call lua_close(...)")
   :count("0-1")
 
 cbundle
-  :option("--input", "input file")
+  :option("--input", "Input file")
   :args(1)
   :count(1)
 
 cbundle
-  :flag("--deps", "generate a make .d file")
+  :flag("--deps", "Generate a make .d file")
   :count("0-1")
 
 cbundle
-  :option("--deps-target", "override dependency target file")
+  :option("--deps-target", "Override dependency target file")
   :args(1)
   :count("0-1")
 
 cbundle
-  :option("--output-directory", "output directory")
+  :option("--output-directory", "Output directory")
   :args(1)
   :count(1)
 
 cbundle
-  :option("--output-prefix", "output name prefix")
+  :option("--output-prefix", "Output name prefix")
   :args(1)
   :count("0-1")
 
@@ -101,53 +101,53 @@ cbundle
   :count(1)
 
 local ctemplate = parser
-  :command("template", "process templates")
+  :command("template", "Process templates")
 
 ctemplate:mutex(
 
   ctemplate
-    :option("-f --file", "input file")
+    :option("-f --file", "Input file")
     :args(1)
     :count("0-1"),
 
   ctemplate
-    :option("-d --directory", "input directory")
+    :option("-d --directory", "Input directory")
     :args(1)
     :count("0-1"))
 
 ctemplate
-  :option("-o --output", "output file or directory")
+  :option("-o --output", "Output file or directory")
   :args(1)
   :count(1)
 
 ctemplate
-  :flag("-M --deps", "generate a make .d file")
+  :flag("-M --deps", "Generate a make .d file")
   :count("0-1")
 
 ctemplate
-  :option("-t --trim", "prefix to remove from directory prefix before output (only used when -d is provided)")
+  :option("-t --trim", "Prefix to remove from directory prefix before output (only used when -d is provided)")
   :args(1)
   :count("?")
 
 ctemplate
-  :option("-c --config", "a configuration file")
+  :option("-c --config", "A configuration file")
   :args(1)
   :count("*")
 
 local ctest = parser
-  :command("test", "run tests")
+  :command("test", "Run tests")
 
 ctest
-  :option("-m --match", "only load the matching files")
+  :option("-m --match", "Only load the matching files")
   :args(1)
   :count("0-1")
 
 ctest
-  :flag("-s --stop", "stop after the first error")
+  :flag("-s --stop", "Stop after the first error")
   :count("0-1")
 
 ctest
-  :option("-i --interp", "run files with <interp> instead of via lua dofile")
+  :option("-i --interp", "Run files with <interp> instead of via lua dofile")
   :args(1)
   :count("0-1")
 
@@ -157,59 +157,59 @@ ctest
 
 local function add_cmake_dir_args (cmd)
   cmd
-    :option("--dir", "top-level build directory")
+    :option("--dir", "Top-level build directory")
     :count("0-1")
   cmd
-    :option("--env", "environment and build sub-directory")
+    :option("--env", "Environment and build sub-directory")
     :count("0-1")
   cmd
-    :option("--config", "config file to use")
+    :option("--config", "Config file to use")
     :count("0-1")
 end
 
 local cmake = parser
-  :command("make", "manage lua projects")
+  :command("make", "Manage lua projects")
 
 cmake
-  :option("--dir", "top-level working directory")
+  :option("--dir", "Top-level working directory")
   :count("0-1")
 
 cmake
-  :option("--env", "environment")
+  :option("--env", "Environment")
   :count("0-1")
 
 cmake
-  :option("--config", "alternative config file")
+  :option("--config", "Alternative config file")
   :count("0-1")
 
 local cmake_init = cmake
-  :command("init", "initialize a new project")
+  :command("init", "Initialize a new project")
 
 cmake_init:mutex(
-  cmake_init:flag("--web", "initialize a web project"),
-  cmake_init:flag("--lib", "initialize a lib project"))
+  cmake_init:flag("--web", "Initialize a web project"),
+  cmake_init:flag("--lib", "Initialize a lib project"))
 
 local cmake_test = cmake
-  :command("test", "run projet tests")
+  :command("test", "Run project tests")
 
 add_cmake_dir_args(cmake_test)
 
 cmake_test
-  :flag("--iterate", "iteratively run tests")
+  :flag("--iterate", "Iteratively run tests")
 
 cmake_test
-  :flag("--wasm", "run in WASM mode")
+  :flag("--wasm", "Run in WASM mode")
 
 cmake_test
-  :flag("--profile", "report the performance profile")
+  :flag("--profile", "Report the performance profile")
 
 local cmake_release = cmake
-  :command("release", "release the project")
+  :command("release", "Release the project")
 
 add_cmake_dir_args(cmake_release)
 
 cmake
-  :command("install", "install the project")
+  :command("install", "Install the project")
 
 local args = parser:parse()
 
