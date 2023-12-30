@@ -203,6 +203,13 @@ cmake_test
 cmake_test
   :flag("--profile", "Report the performance profile")
 
+cmake_test
+  :flag("--sanitize", "Enable sanitizers")
+
+cmake_test
+  :option("--single", "Run a single test")
+  :count("0-1")
+
 local cmake_release = cmake
   :command("release", "Release the project")
 
@@ -344,7 +351,9 @@ err.check(err.pwrap(function (check)
       config = args.config,
       iterate = args.iterate,
       wasm = args.wasm,
-      profile = args.profile
+      sanitize = args.sanitize,
+      profile = args.profile,
+      single = args.single,
     }))
 
     if args.test and args.iterate then
