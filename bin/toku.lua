@@ -170,6 +170,18 @@ end
 local cmake = parser
   :command("make", "manage lua projects")
 
+cmake
+  :option("--dir", "top-level working directory")
+  :count("0-1")
+
+cmake
+  :option("--env", "environment")
+  :count("0-1")
+
+cmake
+  :option("--config", "alternative config file")
+  :count("0-1")
+
 local cmake_init = cmake
   :command("init", "initialize a new project")
 
