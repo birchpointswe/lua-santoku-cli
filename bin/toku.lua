@@ -213,6 +213,9 @@ cmake_test
 local cmake_release = cmake
   :command("release", "Release the project")
 
+cmake_release
+  :flag("--skip-tests", "Skip tests")
+
 add_cmake_dir_args(cmake_release)
 
 cmake
@@ -350,6 +353,7 @@ err.check(err.pwrap(function (check)
       env = args.env,
       config = args.config,
       iterate = args.iterate,
+      skip_tests = args.skip_tests,
       wasm = args.wasm,
       sanitize = args.sanitize,
       profile = args.profile,
