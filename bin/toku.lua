@@ -341,7 +341,7 @@ err.check(err.pwrap(function (check)
       ignores = args.ignore,
       outprefix = args.output_prefix,
       cc = args.cc,
-      close = close
+      close = close,
       luac = luac,
       xxd = args.xxd
     }))
