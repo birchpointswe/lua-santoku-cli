@@ -67,6 +67,10 @@ cbundle
   :count("0-1")
 
 cbundle
+  :flag("--close", "Call lua_close(...)")
+  :count("0-1")
+
+cbundle
   :option("--input", "Input file")
   :args(1)
   :count(1)
@@ -318,6 +322,14 @@ err.check(err.pwrap(function (check)
         return not str.isempty(s)
       end):vec() or vec()
 
+    local close = nil
+
+    if args.close then
+      close = true
+    elseif args.no_close then
+      close = false
+    end
+
     check(bundle(args.input, args.output_directory, {
       env = args.env,
       mods = args.mod,
@@ -329,7 +341,7 @@ err.check(err.pwrap(function (check)
       ignores = args.ignore,
       outprefix = args.output_prefix,
       cc = args.cc,
-      close = not args.no_close,
+      close = close
       luac = luac,
       xxd = args.xxd
     }))
