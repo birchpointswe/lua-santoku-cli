@@ -160,70 +160,56 @@ ctest
   :args("*")
 
 local function add_cmake_dir_args (cmd)
-  cmd
-    :option("--dir", "Top-level build directory")
-    :count("0-1")
-  cmd
-    :option("--env", "Environment and build sub-directory")
-    :count("0-1")
-  cmd
-    :option("--config", "Config file to use")
-    :count("0-1")
+  cmd:option("--dir", "Top-level build directory"):count("0-1")
+  cmd:option("--env", "Environment and build sub-directory"):count("0-1")
+  cmd:option("--config", "Config file to use"):count("0-1")
 end
 
-local cmake = parser
-  :command("make", "Manage lua projects")
+local clib = parser:command("lib", "Manage lua library projects")
+local cweb = parser:command("web", "Manage lua web projects")
 
-cmake
-  :option("--dir", "Top-level working directory")
-  :count("0-1")
+add_cmake_dir_args(clib)
+add_cmake_dir_args(cweb)
 
-cmake
-  :option("--env", "Environment")
-  :count("0-1")
+cweb
+  :option("--openresty-dir", "Openresty installation directory")
+  :default(os.getenv("OPENRESTY_DIR"))
 
-cmake
-  :option("--config", "Alternative config file")
-  :count("0-1")
+clib:command("init", "Initialize a new library project")
+cweb:command("init", "Initialize a new web project")
 
-local cmake_init = cmake
-  :command("init", "Initialize a new project")
+local clib_test = clib:command("test", "Run project tests")
+local cweb_test = cweb:command("test", "Run project tests")
 
-cmake_init:mutex(
-  cmake_init:flag("--web", "Initialize a web project"),
-  cmake_init:flag("--lib", "Initialize a lib project"))
+clib_test:flag("--iterate", "Iteratively run tests")
+cweb_test:flag("--iterate", "Iteratively run tests")
 
-local cmake_test = cmake
-  :command("test", "Run project tests")
+clib_test:flag("--wasm", "Run in WASM mode")
 
-add_cmake_dir_args(cmake_test)
+clib_test:flag("--profile", "Report the performance profile")
+cweb_test:flag("--profile", "Report the performance profile")
 
-cmake_test
-  :flag("--iterate", "Iteratively run tests")
+clib_test:flag("--sanitize", "Enable sanitizers")
+cweb_test:flag("--sanitize", "Enable sanitizers")
 
-cmake_test
-  :flag("--wasm", "Run in WASM mode")
+clib_test:option("--single", "Run a single test"):count("0-1")
+cweb_test:option("--single", "Run a single test"):count("0-1")
 
-cmake_test
-  :flag("--profile", "Report the performance profile")
+local clib_release = clib:command("release", "Release the library")
+local clib_install = clib:command("install", "Install the library")
 
-cmake_test
-  :flag("--sanitize", "Enable sanitizers")
+clib_release:flag("--skip-tests", "Skip tests")
+clib_install:flag("--skip-tests", "Skip tests")
 
-cmake_test
-  :option("--single", "Run a single test")
-  :count("0-1")
+clib_install:option("--luarocks-config", "Luarocks config file to use"):count("0-1")
 
-local cmake_release = cmake
-  :command("release", "Release the project")
+local cweb_start = cweb:command("start", "Start the server")
 
-cmake_release
-  :flag("--skip-tests", "Skip tests")
+cweb_start:flag("--background", "Run in background")
+cweb_start:flag("--test", "Start the test environment")
 
-add_cmake_dir_args(cmake_release)
-
-cmake
-  :command("install", "Install the project")
+cweb:command("build", "Build the server")
+cweb:command("stop", "Start the server")
 
 local args = parser:parse()
 
@@ -350,20 +336,21 @@ err.check(err.pwrap(function (check)
 
     check(testrunner.run(args.files, args))
 
-  elseif args.command == "make" and args.init and args.lib then
+  elseif args.command == "lib" and args.init then
 
     check(make.create_lib())
 
-  elseif args.command == "make" and args.init and args.web then
+  elseif args.command == "web" and args.init then
 
     check(make.create_web())
 
-  elseif args.command == "make" then
+  elseif args.command == "lib" then
 
     local m = check(make.init({
       dir = args.dir,
       env = args.env,
       config = args.config,
+      luarocks_config = args.luarocks_config,
       iterate = args.iterate,
       skip_tests = args.skip_tests,
       wasm = args.wasm,
@@ -374,18 +361,45 @@ err.check(err.pwrap(function (check)
 
     if args.test and args.iterate then
       check(m:iterate())
-    elseif args.test then
+    elseif args.test and not args.iterate then
       check(m:test())
-    elseif m.config.type == "lib" and args.release then
+    elseif args.release then
       check(m:release())
-    elseif m.config.type == "lib" and args.install then
+    elseif args.install then
       check(m:install())
-    elseif m.config.type == "web" and args.start then
+    else
+      check(false, "invalid command")
+    end
+
+  elseif args.command == "web" then
+
+    local m = check(make.init({
+      dir = args.dir,
+      env = args.env,
+      config = args.config,
+      luarocks_config = args.luarocks_config,
+      background = args.background,
+      test = args.test,
+      iterate = args.iterate,
+      skip_tests = args.skip_tests,
+      sanitize = args.sanitize,
+      profile = args.profile,
+      single = args.single,
+      openresty_dir = args.openresty_dir,
+    }))
+
+    if args.test and args.iterate then
+      check(m:iterate())
+    elseif args.test and not args.iterate then
+      check(m:test())
+    elseif args.build then
+      check(m:build())
+    elseif args.start then
       check(m:start())
-    elseif m.config.type == "web" and args.stop then
+    elseif args.stop then
       check(m:stop())
     else
-      check(false, "command not supported for this type of project")
+      check(false, "invalid command")
     end
 
   else
