@@ -208,7 +208,9 @@ local cweb_start = cweb:command("start", "Start the server")
 cweb_start:flag("--background", "Run in background")
 cweb_start:flag("--test", "Start the test environment")
 
-cweb:command("build", "Build the server")
+local cweb_build = cweb:command("build", "Build the server")
+cweb_build:flag("--test", "Build the test environment")
+
 cweb:command("stop", "Start the server")
 
 local args = parser:parse()
@@ -388,16 +390,16 @@ err.check(err.pwrap(function (check)
       openresty_dir = args.openresty_dir,
     }))
 
-    if args.test and args.iterate then
+    if args.build then
+      check(m:build({ test = args.test }))
+    elseif args.start then
+      check(m:start({ test = args.test }))
+    elseif args.stop then
+      check(m:stop())
+    elseif args.test and args.iterate then
       check(m:iterate())
     elseif args.test and not args.iterate then
       check(m:test())
-    elseif args.build then
-      check(m:build())
-    elseif args.start then
-      check(m:start())
-    elseif args.stop then
-      check(m:stop())
     else
       check(false, "invalid command")
     end
