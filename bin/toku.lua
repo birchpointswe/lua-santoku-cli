@@ -386,7 +386,7 @@ err.check(err.pwrap(function (check)
       background = args.background,
       test = args.test,
       iterate = args.iterate,
-      skip_coverage = args.skip_coverage,
+      skip_coverage = args.skip_coverage or args.start,
       skip_tests = args.skip_tests,
       profile = args.profile,
       single = args.single,
