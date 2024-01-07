@@ -189,8 +189,10 @@ clib_test:flag("--wasm", "Run in WASM mode")
 clib_test:flag("--profile", "Report the performance profile")
 cweb_test:flag("--profile", "Report the performance profile")
 
+clib_test:flag("--skip-coverage", "Skip coverage reporting")
+cweb_test:flag("--skip-coverage", "Skip coverage reporting")
+
 clib_test:flag("--sanitize", "Enable sanitizers")
-cweb_test:flag("--sanitize", "Enable sanitizers")
 
 clib_test:option("--single", "Run a single test"):count("0-1")
 cweb_test:option("--single", "Run a single test"):count("0-1")
@@ -354,6 +356,7 @@ err.check(err.pwrap(function (check)
       config = args.config,
       luarocks_config = args.luarocks_config,
       iterate = args.iterate,
+      skip_coverage = args.skip_coverage,
       skip_tests = args.skip_tests,
       wasm = args.wasm,
       sanitize = args.sanitize,
@@ -383,8 +386,8 @@ err.check(err.pwrap(function (check)
       background = args.background,
       test = args.test,
       iterate = args.iterate,
+      skip_coverage = args.skip_coverage,
       skip_tests = args.skip_tests,
-      sanitize = args.sanitize,
       profile = args.profile,
       single = args.single,
       openresty_dir = args.openresty_dir,
