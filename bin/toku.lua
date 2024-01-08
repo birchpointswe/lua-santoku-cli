@@ -235,11 +235,14 @@ end
 local function process_file (check, conf, input, output, deps, configs)
   local data = check(fs.readfile(input == "-" and io.stdin or input))
   local tmpl, out
-  if tpl._should_include(fs.extension(input), input, conf) then
+  local action = tpl.get_action(input, conf)
+  if action == "template" then
     tmpl = check(tpl(data, conf))
     out = check(tmpl(conf.env))
-  else
+  elseif action == "copy" then
     out = data
+  else
+    return
   end
   check(fs.mkdirp(fs.dirname(output)))
   check(fs.writefile(output == "-" and io.stdout or output, out))
