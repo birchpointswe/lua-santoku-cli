@@ -197,6 +197,10 @@ clib_test:flag("--sanitize", "Enable sanitizers")
 clib_test:option("--single", "Run a single test"):count("0-1")
 cweb_test:option("--single", "Run a single test"):count("0-1")
 
+clib_test:option("--lua", "Specify the lua interpreter"):count("0-1")
+clib_test:option("--lua-path-extra", "Specify extra lua path dirs"):count("0-1")
+clib_test:option("--lua-cpath-extra", "Specify extra lua cpath dirs"):count("0-1")
+
 local clib_release = clib:command("release", "Release the library")
 local clib_install = clib:command("install", "Install the library")
 
@@ -356,6 +360,9 @@ err.check(err.pwrap(function (check)
     local m = check(make.init({
       dir = args.dir,
       env = args.env,
+      lua = args.lua,
+      lua_path_extra = args.lua_path_extra,
+      lua_cpath_extra = args.lua_cpath_extra,
       config = args.config,
       luarocks_config = args.luarocks_config,
       iterate = args.iterate,
