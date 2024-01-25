@@ -5,7 +5,7 @@ end
 
 local test = require("santoku.test")
 local sys = require("santoku.system")
-local err = require("santoku.err")
+local check = require("santoku.check")
 
 test("santoku-cli", function ()
 
@@ -17,7 +17,7 @@ test("santoku-cli", function ()
       toku .. " template -f - -o -"
       local ok, gen = sys.sh("sh", "-c", cmd)
       assert(ok == true, gen)
-      assert(gen:map(err.check):co():head() == "hello")
+      assert(gen:map(check):co():head() == "hello")
     end)
 
     test("should support multiple configs", function ()
@@ -26,7 +26,7 @@ test("santoku-cli", function ()
       toku .. " template -c test/res/tmpl.cfg0.lua -c test/res/tmpl.cfg1.lua -f - -o -"
       local ok, gen = sys.sh("sh", "-c", cmd)
       assert(ok == true, gen)
-      assert(gen:map(err.check):co():head() == "1 2 3")
+      assert(gen:map(check):co():head() == "1 2 3")
     end)
 
   end)

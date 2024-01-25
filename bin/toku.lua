@@ -6,7 +6,7 @@ local gen = require("santoku.gen")
 local vec = require("santoku.vector")
 local str = require("santoku.string")
 local testrunner = require("santoku.test.runner")
-local err = require("santoku.err")
+local check = require("santoku.check")
 local fs = require("santoku.fs")
 local tpl = require("santoku.template")
 local tbl = require("santoku.table")
@@ -272,7 +272,7 @@ local function process_files (check, conf, trim, input, mode, output, deps, conf
     output = fs.join(output, outfile)
     process_file(check, conf, input, output, deps, configs)
   else
-    error("Unexpected mode: " .. mode .. " for file: " .. input)
+    check:error("Unexpected mode", mode, "for file", input)
   end
 end
 
@@ -286,7 +286,7 @@ local function get_config (check, configs)
   return cfg
 end
 
-err.check(err.pwrap(function (check)
+check(check:wrap(function (check)
 
   if args.command == "template" then
 
