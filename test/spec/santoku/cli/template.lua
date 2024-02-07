@@ -26,9 +26,7 @@ test("template", function ()
     local toku = var("LUA") .. " -l luacov bin/toku.lua"
     local cmd = "echo '<% return \"hello\" %>' | " ..
     toku .. " template -f - -o -"
-    print(err.pcall(function ()
     assert(eq("hello", first(sh({ "sh", "-c", cmd }))))
-    end))
   end)
 
 end)

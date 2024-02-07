@@ -278,7 +278,7 @@ end
 if args.command == "template" then
 
   local run_env = pushindex({}, _G)
-  local conf = runfile(args.config, run_env)
+  local conf = args.config and runfile(args.config, run_env) or {}
 
   if args.directory then
     mkdirp(args.output)
