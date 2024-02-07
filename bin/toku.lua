@@ -1,17 +1,45 @@
-
+local err = require("santoku.error")
+local error = err.error
 
 local argparse = require("argparse")
-local inherit = require("santoku.inherit")
-local gen = require("santoku.gen")
-local vec = require("santoku.vector")
-local str = require("santoku.string")
-local testrunner = require("santoku.test.runner")
-local check = require("santoku.check")
-local fs = require("santoku.fs")
-local tpl = require("santoku.template")
-local tbl = require("santoku.table")
 local bundle = require("santoku.bundle")
-local make = require("santoku.make.project")
+local project = require("santoku.make.project")
+local runtests = require("santoku.test.runner")
+
+local env = require("santoku.env")
+local var = env.var
+
+local arr = require("santoku.array")
+local push = arr.push
+local extend = arr.extend
+
+local inherit = require("santoku.inherit")
+local pushindex = inherit.pushindex
+
+local str = require("santoku.string")
+local ssub = str.sub
+local ssplit = str.split
+local startswith = str.startswith
+
+local iter = require("santoku.iter")
+local collect = iter.collect
+local map = iter.map
+local flatten = iter.flatten
+local ivals = iter.ivals
+
+local fs = require("santoku.fs")
+local runfile = fs.runfile
+local mode = fs.mode
+local mkdirp = fs.mkdirp
+local files = fs.files
+local writefile = fs.writefile
+local dirname = fs.dirname
+local stdin = io.stdin
+local stdout = io.stdout
+
+local template = require("santoku.template")
+local renderfile = template.renderfile
+local serialize_deps = template.serialize_deps
 
 local parser = argparse()
   :name("toku")
@@ -136,7 +164,7 @@ ctemplate
 ctemplate
   :option("-c --config", "A configuration file")
   :args(1)
-  :count("*")
+  :count("0-1")
 
 local ctest = parser
   :command("test", "Run tests")
@@ -173,7 +201,7 @@ add_cmake_dir_args(cweb)
 
 cweb
   :option("--openresty-dir", "Openresty installation directory")
-  :default(os.getenv("OPENRESTY_DIR"))
+  :default(var("OPENRESTY_DIR", nil))
 
 clib:command("init", "Initialize a new library project")
 cweb:command("init", "Initialize a new web project")
@@ -221,204 +249,155 @@ cweb:command("stop", "Start the server")
 
 local args = parser:parse()
 
-
-local function write_deps (check, deps, input, output, configs)
-  local depsfile = output .. ".d"
-  local out = gen.chain(
-      gen.pack(output, ": "),
-      gen.ivals(configs):interleave(" "),
-      gen.pack(" "),
-      gen.ivals(deps):interleave(" "),
-      gen.pack("\n", depsfile, ": ", input, "\n"))
-    :vec()
-    :concat()
-  check(fs.writefile(depsfile, out))
-end
-
-
-local function process_file (check, conf, input, output, deps, configs)
-  local data = check(fs.readfile(input == "-" and io.stdin or input))
-  local tmpl, out
-  local action = tpl.get_action(input, conf)
-  if action == "template" then
-    tmpl = check(tpl(data, conf))
-    out = check(tmpl(conf.env))
-  elseif action == "copy" then
-    out = data
-  else
-    return
-  end
-  check(fs.mkdirp(fs.dirname(output)))
-  check(fs.writefile(output == "-" and io.stdout or output, out))
-  if deps and tmpl then
-    write_deps(check, tmpl.deps, input, output, configs)
+local function template_file (conf, input, output, write_deps, config)
+  local out, deps = renderfile(input == "-" and stdin or input, conf.env)
+  mkdirp(dirname(output))
+  writefile(output == "-" and stdout or output, out)
+  if write_deps and deps and output ~= "-" then
+    writefile(output .. ".d", serialize_deps(input, output, push(extend({}, deps), config)))
   end
 end
 
-
-local function process_files (check, conf, trim, input, mode, output, deps, configs)
+local function template_files (conf, trim, input, mode, output, deps, config)
   if mode == "directory" then
-    fs.files(input, { recurse = true })
-      :map(check)
-      :each(function (fp, mode)
-        process_files(check, conf, trim, fp, mode, output, deps, configs)
-      end)
+    for fp in files(input, true) do
+      template_files(conf, trim, fp, mode, output, deps, config)
+    end
   elseif mode == "file" then
-    local trimlen = trim and string.len(trim)
     local outfile = input
-    if trim and outfile:sub(0, trimlen) == trim then
-      outfile = outfile:sub(trimlen + 1)
+    if trim and startswith(outfile, trim) then
+      outfile = ssub(outfile, #trim + 1)
     end
     output = fs.join(output, outfile)
-    process_file(check, conf, input, output, deps, configs)
+    template_file(conf, input, output, deps, config)
   else
-    check:error("Unexpected mode", mode, "for file", input)
+    error("Unexpected mode", mode, "for file", input)
   end
 end
 
+if args.command == "template" then
 
-local function get_config (check, configs)
-  local lenv = inherit.pushindex({}, _G)
-  local cfg = tbl.merge({}, gen.ivals(configs):map(function (config)
-    return check(fs.loadfile(config, lenv))() or {}
-  end):vec():unpack())
-  cfg.env = inherit.pushindex(cfg.env or {}, _G)
-  return cfg
-end
+  local run_env = pushindex({}, _G)
+  local conf = runfile(args.config, run_env)
 
-check(check:wrap(function (check)
-
-  if args.command == "template" then
-
-    local conf = get_config(check, args.config)
-    if args.directory then
-      check(fs.mkdirp(args.output))
-      local mode = check(fs.mode(args.directory))
-      process_files(check, conf, args.trim, args.directory, mode, args.output, args.deps, args.config)
-    elseif args.file then
-      process_file(check, conf, args.file, args.output, args.deps, args.config)
-    else
-      parser:error("either -f --file or -d --directory must be provided")
-    end
-
-  elseif args.command == "bundle" then
-
-    local luac = nil
-
-    if args.luac then
-      luac = args.luac
-    elseif args.luac_off then
-      luac = false
-    elseif args.luac_default then
-      luac = true
-    end
-
-    local flags = args.flags and gen.ivals(args.flags)
-      :map(str.split):map(gen.ivals):flatten()
-      :filter(function (s)
-        return not str.isempty(s)
-      end):vec() or vec()
-
-    local close = nil
-
-    if args.close then
-      close = true
-    elseif args.no_close then
-      close = false
-    end
-
-    check(bundle(args.input, args.output_directory, {
-      env = args.env,
-      mods = args.mod,
-      flags = flags,
-      path = args.path,
-      cpath = args.cpath,
-      deps = args.deps,
-      depstarget = args.deps_target,
-      ignores = args.ignore,
-      outprefix = args.output_prefix,
-      cc = args.cc,
-      close = close,
-      luac = luac,
-      xxd = args.xxd
-    }))
-
-  elseif args.command == "test" then
-
-    check(testrunner.run(args.files, args))
-
-  elseif args.command == "lib" and args.init then
-
-    check(make.create_lib())
-
-  elseif args.command == "web" and args.init then
-
-    check(make.create_web())
-
-  elseif args.command == "lib" then
-
-    local m = check(make.init({
-      dir = args.dir,
-      env = args.env,
-      lua = args.lua,
-      lua_path_extra = args.lua_path_extra,
-      lua_cpath_extra = args.lua_cpath_extra,
-      config = args.config,
-      luarocks_config = args.luarocks_config,
-      iterate = args.iterate,
-      skip_coverage = args.skip_coverage,
-      skip_tests = args.skip_tests,
-      wasm = args.wasm,
-      sanitize = args.sanitize,
-      profile = args.profile,
-      single = args.single,
-    }))
-
-    if args.test and args.iterate then
-      check(m:iterate())
-    elseif args.test and not args.iterate then
-      check(m:test())
-    elseif args.release then
-      check(m:release())
-    elseif args.install then
-      check(m:install())
-    else
-      check(false, "invalid command")
-    end
-
-  elseif args.command == "web" then
-
-    local m = check(make.init({
-      dir = args.dir,
-      env = args.env,
-      config = args.config,
-      luarocks_config = args.luarocks_config,
-      background = args.background,
-      test = args.test,
-      iterate = args.iterate,
-      skip_coverage = args.skip_coverage or args.start,
-      skip_tests = args.skip_tests,
-      profile = args.profile,
-      single = args.single,
-      openresty_dir = args.openresty_dir,
-    }))
-
-    if args.build then
-      check(m:build({ test = args.test }))
-    elseif args.start then
-      check(m:start({ test = args.test }))
-    elseif args.stop then
-      check(m:stop())
-    elseif args.test and args.iterate then
-      check(m:iterate())
-    elseif args.test and not args.iterate then
-      check(m:test())
-    else
-      check(false, "invalid command")
-    end
-
+  if args.directory then
+    mkdirp(args.output)
+    local md = mode(args.directory)
+    template_files(conf, args.trim, args.directory, md, args.output, args.deps, args.config)
+  elseif args.file then
+    template_file(conf, args.file, args.output, args.deps, args.config)
   else
-    check(false, "invalid command")
+    parser:error("either -f --file or -d --directory must be provided")
   end
 
-end))
+elseif args.command == "bundle" then
+
+  local luac = nil
+
+  if args.luac then
+    luac = args.luac
+  elseif args.luac_off then
+    luac = false
+  elseif args.luac_default then
+    luac = true
+  end
+
+  local flags = collect(map(ssub, flatten(map(ssplit, ivals(args.flags)))))
+
+  local close = args.close or args.no_close or nil
+
+  bundle(args.input, args.output_directory, {
+    env = args.env,
+    mods = args.mod,
+    flags = flags,
+    path = args.path,
+    cpath = args.cpath,
+    deps = args.deps,
+    depstarget = args.deps_target,
+    ignores = args.ignore,
+    outprefix = args.output_prefix,
+    cc = args.cc,
+    close = close,
+    luac = luac,
+    xxd = args.xxd
+  })
+
+elseif args.command == "test" then
+
+  args.interp = collect(map(ssub, ssplit(args.interp, "%s+")))
+
+  runtests(args.files, args)
+
+elseif args.command == "lib" and args.init then
+
+  project.create_lib()
+
+elseif args.command == "web" and args.init then
+
+  project.create_web()
+
+elseif args.command == "lib" then
+
+  local m = project.init({
+    dir = args.dir,
+    env = args.env,
+    lua = args.lua,
+    lua_path_extra = args.lua_path_extra,
+    lua_cpath_extra = args.lua_cpath_extra,
+    config = args.config,
+    luarocks_config = args.luarocks_config,
+    iterate = args.iterate,
+    skip_coverage = args.skip_coverage,
+    skip_tests = args.skip_tests,
+    wasm = args.wasm,
+    sanitize = args.sanitize,
+    profile = args.profile,
+    single = args.single,
+  })
+
+  if args.test and args.iterate then
+    m.iterate()
+  elseif args.test and not args.iterate then
+    m.test()
+  elseif args.release then
+    m.release()
+  elseif args.install then
+    m.install()
+  else
+    error("invalid command", args.command)
+  end
+
+elseif args.command == "web" then
+
+  local m = project.init({
+    dir = args.dir,
+    env = args.env,
+    config = args.config,
+    luarocks_config = args.luarocks_config,
+    background = args.background,
+    test = args.test,
+    iterate = args.iterate,
+    skip_coverage = args.skip_coverage or args.start,
+    skip_tests = args.skip_tests,
+    profile = args.profile,
+    single = args.single,
+    openresty_dir = args.openresty_dir,
+  })
+
+  if args.build then
+    m.build({ test = args.test })
+  elseif args.start then
+    m.start({ test = args.test })
+  elseif args.stop then
+    m.stop()
+  elseif args.test and args.iterate then
+    m.iterate()
+  elseif args.test and not args.iterate then
+    m.test()
+  else
+    error("invalid command")
+  end
+
+else
+  error("invalid command")
+end
