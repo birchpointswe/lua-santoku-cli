@@ -24,6 +24,7 @@ local startswith = str.startswith
 local iter = require("santoku.iter")
 local collect = iter.collect
 local map = iter.map
+local filter = iter.filter
 local flatten = iter.flatten
 local ivals = iter.ivals
 
@@ -324,7 +325,9 @@ elseif args.command == "bundle" then
 
 elseif args.command == "test" then
 
-  args.interp = collect(map(ssub, ssplit(args.interp, "%s+")))
+  args.interp = collect(map(ssub, filter(function (_, s, e)
+    return e >= s
+  end, ssplit(args.interp, "%s+"))))
 
   runtests(args.files, args)
 
