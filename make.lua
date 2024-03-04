@@ -11,7 +11,7 @@ local env = {
     "santoku == 0.0.159-1",
     "santoku-fs == 0.0.13-1",
     "santoku-template == 0.0.10-1",
-    "santoku-bundle == 0.0.19-1",
+    "santoku-bundle == 0.0.19-2",
     "santoku-system == 0.0.11-1",
     "santoku-test-runner == 0.0.11-1",
     "santoku-make == 0.0.31-1",
