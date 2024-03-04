@@ -7,7 +7,7 @@ local env = {
   public = true,
 
   dependencies = {
-    "lua == 5.1",
+    "lua >= 5.1",
     "santoku == 0.0.159-1",
     "santoku-fs == 0.0.13-1",
     "santoku-template == 0.0.10-1",
