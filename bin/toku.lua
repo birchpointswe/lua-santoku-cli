@@ -18,7 +18,7 @@ local pushindex = inherit.pushindex
 
 local str = require("santoku.string")
 local ssub = str.sub
-local ssplit = str.split
+local ssplits = str.splits
 local startswith = str.startswith
 
 local iter = require("santoku.iter")
@@ -303,7 +303,7 @@ elseif args.command == "bundle" then
     luac = true
   end
 
-  local flags = collect(map(ssub, flatten(map(ssplit, ivals(args.flags)))))
+  local flags = collect(map(ssub, flatten(map(ssplits, ivals(args.flags)))))
 
   local close = args.close or args.no_close or nil
 
@@ -327,7 +327,7 @@ elseif args.command == "test" then
 
   args.interp = collect(map(ssub, filter(function (_, s, e)
     return e >= s
-  end, ssplit(args.interp, "%s+"))))
+  end, ssplits(args.interp, "%s+"))))
 
   runtests(args.files, args)
 
