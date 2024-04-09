@@ -238,6 +238,10 @@ clib_install:flag("--skip-tests", "Skip tests")
 
 clib_install:option("--luarocks-config", "Luarocks config file to use"):count("0-1")
 
+local clib_exec = clib:command("exec", "Execute a command in the build environment")
+clib_exec:handle_options(false)
+clib_exec:argument("args", "Arguments"):args("*")
+
 local cweb_start = cweb:command("start", "Start the server")
 
 cweb_start:flag("--background", "Run in background")
@@ -358,7 +362,12 @@ elseif args.command == "lib" then
     single = args.single,
   })
 
-  if args.test and args.iterate then
+  if args.exec then
+
+
+
+    m.exec(args.args)
+  elseif args.test and args.iterate then
     m.iterate()
   elseif args.test and not args.iterate then
     m.test()
