@@ -1,7 +1,7 @@
 local env = {
 
   name = "santoku-cli",
-  version = "0.0.191-1",
+  version = "0.0.192-1",
   variable_prefix = "TK_CLI",
   license = "MIT",
   public = true,
@@ -11,7 +11,7 @@ local env = {
     "santoku >= 0.0.203-1",
     "santoku-fs >= 0.0.30-1",
     "santoku-template >= 0.0.22-1",
-    "santoku-bundle >= 0.0.28-1",
+    "santoku-bundle >= 0.0.29-1",
     "santoku-system >= 0.0.23-1",
     "santoku-test-runner >= 0.0.22-1",
     "santoku-make >= 0.0.54-1",
