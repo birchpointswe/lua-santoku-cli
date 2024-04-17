@@ -14,7 +14,7 @@ local env = {
     "santoku-bundle >= 0.0.28-1",
     "santoku-system >= 0.0.23-1",
     "santoku-test-runner >= 0.0.22-1",
-    "santoku-make >= 0.0.55-1",
+    "santoku-make >= 0.0.54-1",
     "argparse >= 0.7.1-1",
   },
 
