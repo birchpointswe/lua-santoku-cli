@@ -1,7 +1,7 @@
 local env = {
 
   name = "santoku-cli",
-  version = "0.0.206-1",
+  version = "0.0.207-1",
   variable_prefix = "TK_CLI",
   license = "MIT",
   public = true,
@@ -14,7 +14,7 @@ local env = {
     "santoku-bundle >= 0.0.30-1",
     "santoku-system >= 0.0.23-1",
     "santoku-test-runner >= 0.0.23-1",
-    "santoku-make >= 0.0.68-1",
+    "santoku-make >= 0.0.69-1",
     "argparse >= 0.7.1-1",
   },
 
@@ -32,10 +32,5 @@ env.download = env.homepage .. "/releases/download/" .. env.version .. "/" .. en
 
 return {
   type = "lib",
-  env = env,
-  rules = {
-    copy = {
-      "test/spec/santoku/cli/template.lua"
-    }
-  },
+  env = env
 }
