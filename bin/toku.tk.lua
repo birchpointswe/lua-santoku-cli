@@ -44,7 +44,8 @@ local serialize_deps = template.serialize_deps
 
 local parser = argparse()
   :name("toku")
-  :description("A command lind interface to the santoku lua library")
+  :description("A command line interface to the santoku lua library")
+  :epilog("<% return name %> <% return version %>")
 
 parser:command_target("command")
 
