@@ -47,7 +47,9 @@ local parser = argparse()
   :description("A command line interface to the santoku lua library")
   :epilog("<% return name %> <% return version %>")
 
-parser:command_target("command")
+parser
+  :command_target("command")
+  :option("--verbosity", "Verbosity", nil, tonumber, 1, "0-1")
 
 local cbundle = parser
   :command("bundle", "Create standalone executables")
@@ -361,6 +363,7 @@ elseif args.command == "lib" then
     sanitize = args.sanitize,
     profile = args.profile,
     single = args.single,
+    verbosity = args.verbosity,
   })
 
   if args.exec then
@@ -395,6 +398,7 @@ elseif args.command == "web" then
     profile = args.profile,
     single = args.single,
     openresty_dir = args.openresty_dir,
+    verbosity = args.verbosity,
   })
 
   if args.build then
