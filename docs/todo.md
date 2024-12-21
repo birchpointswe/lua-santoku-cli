@@ -1,5 +1,7 @@
 # Now
 
+- Allow passing --luarocks to specify luarocks binary or override flags, etc
+
 - Implement cmake_init and cmake_test
 
 - Readline-supported REPL
