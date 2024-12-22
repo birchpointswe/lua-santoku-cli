@@ -1,6 +1,7 @@
 # Now
 
 - Allow passing --luarocks to specify luarocks binary or override flags, etc
+- add --dirty flag to lib/web to force rebuild without having to touch make*
 
 - Implement cmake_init and cmake_test
 
