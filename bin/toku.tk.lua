@@ -242,7 +242,8 @@ local clib_install = clib:command("install", "Install the library")
 clib_release:flag("--skip-tests", "Skip tests")
 clib_install:flag("--skip-tests", "Skip tests")
 
-clib_install:option("--luarocks-config", "Luarocks config file to use"):count("0-1")
+clib_install:option("--luarocks-config", "Luarocks config file to use",
+  nil, nil, "?", "?")
 
 local clib_exec = clib:command("exec", "Execute a command in the build environment")
 clib_exec:handle_options(false)
@@ -259,6 +260,7 @@ cweb_build:flag("--test", "Build the test environment")
 cweb:command("stop", "Start the server")
 
 local args = parser:parse()
+args.luarocks_config = args.luarocks_config and args.luarocks_config[1] or nil
 
 local function template_file (conf, input, output, write_deps, config)
   local out, deps = renderfile(input == "-" and stdin or input, conf.env)
