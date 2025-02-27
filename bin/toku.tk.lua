@@ -221,6 +221,9 @@ clib_test:flag("--wasm", "Run in WASM mode")
 clib_test:flag("--profile", "Report the performance profile")
 cweb_test:flag("--profile", "Report the performance profile")
 
+clib_test:flag("--trace", "Enable source tracing")
+cweb_test:flag("--trace", "Enable source tracing")
+
 clib_test:flag("--skip-coverage", "Skip coverage reporting")
 cweb_test:flag("--skip-coverage", "Skip coverage reporting")
 
@@ -368,6 +371,7 @@ elseif args.command == "lib" then
     wasm = args.wasm,
     sanitize = args.sanitize,
     profile = args.profile,
+    trace = args.trace,
     single = args.single,
     verbosity = args.verbosity,
   })
@@ -403,6 +407,7 @@ elseif args.command == "web" then
     skip_coverage = args.skip_coverage or args.start,
     skip_tests = args.skip_tests,
     profile = args.profile,
+    trace = args.trace,
     single = args.single,
     openresty_dir = args.openresty_dir,
     verbosity = args.verbosity,
