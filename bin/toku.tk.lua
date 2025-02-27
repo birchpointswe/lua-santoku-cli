@@ -51,6 +51,38 @@ parser
   :command_target("command")
   :option("--verbosity", "Verbosity", nil, tonumber, 1, "0-1")
 
+local crun = parser
+  :command("run", "Run the lua interpreter on a file")
+
+crun
+  :option("--lua", "Specify the lua interpreter")
+  :count("0-1")
+
+crun
+  :option("--serialize", "Replace global print with an auto-serializing wrapper.")
+  :args(0)
+  :count("?")
+
+crun
+  :option("--profile", "Run the profiler")
+  :args(0)
+  :count("?")
+
+crun
+  :option("--trace", "Run the tracer")
+  :args(0)
+  :count("?")
+
+crun:mutex(
+  crun
+    :option("--string", "Run the provided lua string")
+    :args(1)
+    :count(1),
+  crun
+    :option("--file", "Run the provided lua file")
+    :args(1)
+    :count(1))
+
 local cbundle = parser
   :command("bundle", "Create standalone executables")
 
@@ -425,6 +457,30 @@ elseif args.command == "web" then
     m.test()
   else
     error("invalid command")
+  end
+
+elseif args.command == "lua" then
+
+  local cmd = { args.lua or env.interpreter()[1] }
+
+  if args.profile then
+    arr.push(cmd, "-l", "santoku.profiler")
+  end
+
+  if args.trace then
+    arr.push(cmd, "-l", "santoku.tracer")
+  end
+
+  if args.serialize then
+    arr.push(cmd, "-l", "santoku.autoserialize")
+  end
+
+  if args.string then
+    arr.push(cmd, "-e", args.string)
+  elseif args.file then
+    arr.push(cmd, args.file)
+  else
+    parser:error("Either --string or --file must be provided")
   end
 
 else
