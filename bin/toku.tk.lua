@@ -77,11 +77,11 @@ crun:mutex(
   crun
     :option("--string", "Run the provided lua string")
     :args(1)
-    :count(1),
+    :count("?"),
   crun
     :option("--file", "Run the provided lua file")
     :args(1)
-    :count(1))
+    :count("?"))
 
 local cbundle = parser
   :command("bundle", "Create standalone executables")
