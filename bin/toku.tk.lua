@@ -9,6 +9,8 @@ local runtests = require("santoku.test.runner")
 local env = require("santoku.env")
 local var = env.var
 
+local sys = require("santoku.system")
+
 local arr = require("santoku.array")
 local push = arr.push
 local extend = arr.extend
@@ -479,9 +481,9 @@ elseif args.command == "lua" then
     arr.push(cmd, "-e", args.string)
   elseif args.file then
     arr.push(cmd, args.file)
-  else
-    parser:error("Either --string or --file must be provided")
   end
+
+  sys.execute(cmd)
 
 else
   error("invalid command")
