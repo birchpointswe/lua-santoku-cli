@@ -258,8 +258,8 @@ cweb_test:flag("--profile", "Report the performance profile")
 clib_test:flag("--trace", "Enable source tracing")
 cweb_test:flag("--trace", "Enable source tracing")
 
-clib_test:flag("--skip-coverage", "Skip coverage reporting")
-cweb_test:flag("--skip-coverage", "Skip coverage reporting")
+clib_test:flag("--coverage", "Enable coverage reporting")
+cweb_test:flag("--coverage", "Enable coverage reporting")
 
 clib_test:flag("--skip-check", "Skip luacheck")
 cweb_test:flag("--skip-check", "Skip luacheck")
@@ -400,7 +400,7 @@ elseif args.command == "lib" then
     luarocks_config = args.luarocks_config,
     iterate = args.iterate,
     skip_check = args.skip_check or args.start,
-    skip_coverage = args.skip_coverage,
+    coverage = args.coverage,
     skip_tests = args.skip_tests,
     wasm = args.wasm,
     sanitize = args.sanitize,
@@ -438,7 +438,7 @@ elseif args.command == "web" then
     test = args.test,
     iterate = args.iterate,
     skip_check = args.skip_check or args.start,
-    skip_coverage = args.skip_coverage or args.start,
+    coverage = args.coverage or args.start,
     skip_tests = args.skip_tests,
     profile = args.profile,
     trace = args.trace,
