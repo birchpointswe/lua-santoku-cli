@@ -241,8 +241,11 @@ cweb
   :option("--openresty-dir", "Openresty installation directory")
   :default(var("OPENRESTY_DIR", nil))
 
-clib:command("init", "Initialize a new library project")
-cweb:command("init", "Initialize a new web project")
+local clib_init = clib:command("init", "Initialize a new library project")
+local cweb_init = cweb:command("init", "Initialize a new web project")
+
+clib_init:option("--name", "Project name"):count("1")
+cweb_init:option("--name", "Project name"):count("1")
 
 local clib_test = clib:command("test", "Run project tests")
 local cweb_test = cweb:command("test", "Run project tests")
@@ -382,11 +385,17 @@ elseif args.command == "test" then
 
 elseif args.command == "lib" and args.init then
 
-  project.create_lib()
+  project.create_lib({
+    name = args.name,
+    dir = args.dir,
+  })
 
 elseif args.command == "web" and args.init then
 
-  project.create_web()
+  project.create_web({
+    name = args.name,
+    dir = args.dir,
+  })
 
 elseif args.command == "lib" then
 
