@@ -336,7 +336,6 @@ ctest:option("--lua-cpath-extra", "Specify extra lua cpath dirs"):count("0-1")
 ctest:option("--openresty-dir", "Openresty installation directory"):count("0-1")
 
 local args = parser:parse()
-args.luarocks_config = args.luarocks_config and args.luarocks_config[1] or nil
 
 local function template_file (conf, input, output, write_deps, config)
   local out, deps = renderfile(input == "-" and stdin or input, conf.env)
