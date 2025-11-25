@@ -44,6 +44,8 @@ local template = require("santoku.template")
 local renderfile = template.renderfile
 local serialize_deps = template.serialize_deps
 
+local mustache = require("santoku.mustache")
+
 local parser = argparse()
   :name("toku")
   :description("A command line interface to the santoku lua library")
@@ -204,6 +206,83 @@ ctemplate
   :args(1)
   :count("0-1")
 
+local cmustache = parser
+  :command("mustache", "Process mustache templates")
+
+cmustache:mutex(
+  cmustache
+    :option("-f --file", "Input file")
+    :args(1)
+    :count("0-1"),
+  cmustache
+    :option("-d --directory", "Input directory")
+    :args(1)
+    :count("0-1"))
+
+cmustache
+  :option("-o --output", "Output file or directory")
+  :args(1)
+  :count(1)
+
+cmustache
+  :option("-t --trim", "Prefix to remove from directory prefix before output")
+  :args(1)
+  :count("?")
+
+cmustache
+  :option("-c --config", "A configuration file")
+  :args(1)
+  :count("0-1")
+
+local cinit = parser
+  :command("init", "Initialize a new project")
+
+cinit:option("--name", "Project name"):count("1")
+cinit:option("--dir", "Project directory"):count("0-1")
+
+local cinstall = parser
+  :command("install", "Install the project")
+
+cinstall:option("--dir", "Top-level build directory"):count("0-1")
+cinstall:option("--env", "Environment and build sub-directory"):count("0-1")
+cinstall:option("--config", "Config file to use"):count("0-1")
+cinstall:option("--luarocks-config", "Luarocks config file to use"):count("0-1")
+cinstall:flag("--skip-tests", "Skip tests")
+cinstall:flag("--bundled", "Bundle executables from bin/ to standalone")
+cinstall:option("--prefix", "Install prefix for bundled executables"):count("0-1")
+cinstall:option("--bundle-cc", "Compiler for bundling"):count("0-1")
+cinstall:option("--bundle-flags", "Compiler flags for bundling"):count("0-1")
+cinstall:option("--bundle-mods", "Modules to preload (comma-separated)"):count("0-1")
+cinstall:option("--bundle-ignores", "Modules to ignore (comma-separated)"):count("0-1")
+cinstall:flag("--wasm", "Bundle to WASM")
+
+local cbuild = parser
+  :command("build", "Build the project")
+
+cbuild:option("--dir", "Top-level build directory"):count("0-1")
+cbuild:option("--env", "Environment and build sub-directory"):count("0-1")
+cbuild:option("--config", "Config file to use"):count("0-1")
+cbuild:flag("--test", "Build the test environment")
+cbuild:option("--openresty-dir", "Openresty installation directory"):count("0-1")
+
+local cstart = parser
+  :command("start", "Start the server")
+
+cstart:option("--dir", "Top-level build directory"):count("0-1")
+cstart:option("--env", "Environment and build sub-directory"):count("0-1")
+cstart:option("--config", "Config file to use"):count("0-1")
+cstart:flag("--background", "Run in background")
+cstart:flag("--test", "Start the test environment")
+cstart:option("--openresty-dir", "Openresty installation directory"):count("0-1")
+
+local cstop = parser
+  :command("stop", "Stop the server")
+
+cstop:option("--dir", "Top-level build directory"):count("0-1")
+cstop:option("--env", "Environment and build sub-directory"):count("0-1")
+cstop:option("--config", "Config file to use"):count("0-1")
+cstop:option("--openresty-dir", "Openresty installation directory"):count("0-1")
+
 local ctest = parser
   :command("test", "Run tests")
 
@@ -224,6 +303,22 @@ ctest
 ctest
   :argument("files")
   :args("*")
+
+
+ctest:option("--dir", "Top-level build directory"):count("0-1")
+ctest:option("--env", "Environment and build sub-directory"):count("0-1")
+ctest:option("--config", "Config file to use"):count("0-1")
+ctest:flag("--iterate", "Iteratively run tests")
+ctest:flag("--wasm", "Run in WASM mode")
+ctest:flag("--profile", "Report the performance profile")
+ctest:flag("--trace", "Enable source tracing")
+ctest:flag("--skip-check", "Skip luacheck")
+ctest:flag("--sanitize", "Enable sanitizers")
+ctest:option("--single", "Run a single test"):count("0-1")
+ctest:option("--lua", "Specify the lua interpreter"):count("0-1")
+ctest:option("--lua-path-extra", "Specify extra lua path dirs"):count("0-1")
+ctest:option("--lua-cpath-extra", "Specify extra lua cpath dirs"):count("0-1")
+ctest:option("--openresty-dir", "Openresty installation directory"):count("0-1")
 
 local function add_cmake_dir_args (cmd)
   cmd:option("--dir", "Top-level build directory"):count("0-1")
@@ -261,9 +356,6 @@ cweb_test:flag("--profile", "Report the performance profile")
 clib_test:flag("--trace", "Enable source tracing")
 cweb_test:flag("--trace", "Enable source tracing")
 
-clib_test:flag("--coverage", "Enable coverage reporting")
-cweb_test:flag("--coverage", "Enable coverage reporting")
-
 clib_test:flag("--skip-check", "Skip luacheck")
 cweb_test:flag("--skip-check", "Skip luacheck")
 
@@ -284,6 +376,14 @@ clib_install:flag("--skip-tests", "Skip tests")
 
 clib_install:option("--luarocks-config", "Luarocks config file to use",
   nil, nil, "?", "?")
+
+clib_install:flag("--bundled", "Bundle executables from bin/ to standalone")
+clib_install:option("--prefix", "Install prefix for bundled executables"):count("0-1")
+clib_install:option("--bundle-cc", "Compiler for bundling"):count("0-1")
+clib_install:option("--bundle-flags", "Compiler flags for bundling"):count("0-1")
+clib_install:option("--bundle-mods", "Modules to preload (comma-separated)"):count("0-1")
+clib_install:option("--bundle-ignores", "Modules to ignore (comma-separated)"):count("0-1")
+clib_install:flag("--wasm", "Bundle to WASM")
 
 local clib_exec = clib:command("exec", "Execute a command in the build environment")
 clib_exec:handle_options(false)
@@ -343,6 +443,45 @@ if args.command == "template" then
     parser:error("either -f --file or -d --directory must be provided")
   end
 
+elseif args.command == "mustache" then
+
+  local run_env = pushindex({}, _G)
+  local conf = args.config and runfile(args.config, run_env) or {}
+
+  local function mustache_file(input, output)
+    local content = input == "-" and stdin:read("*a") or fs.readfile(input)
+    local out = mustache(content, conf)
+    mkdirp(dirname(output))
+    writefile(output == "-" and stdout or output, out)
+  end
+
+  local function mustache_files(trim, input, md, output)
+    if md == "directory" then
+      for fp in files(input, true) do
+        mustache_files(trim, fp, md, output)
+      end
+    elseif md == "file" then
+      local outfile = input
+      if trim and startswith(outfile, trim) then
+        outfile = ssub(outfile, #trim + 1)
+      end
+      output = fs.join(output, outfile)
+      mustache_file(input, output)
+    else
+      error("Unexpected mode", md, "for file", input)
+    end
+  end
+
+  if args.directory then
+    mkdirp(args.output)
+    local md = mode(args.directory)
+    mustache_files(args.trim, args.directory, md, args.output)
+  elseif args.file then
+    mustache_file(args.file, args.output)
+  else
+    parser:error("either -f --file or -d --directory must be provided")
+  end
+
 elseif args.command == "bundle" then
 
   local luac = nil
@@ -377,14 +516,108 @@ elseif args.command == "bundle" then
 
 elseif args.command == "test" then
 
-  args.interp = collect(map(ssub, filter(function (_, s, e)
-    return e >= s
-  end, ssplits(args.interp, "%s+"))))
+  if #args.files > 0 then
 
-  runtests(args.files, args)
+    if args.interp then
+      args.interp = collect(map(ssub, filter(function (_, s, e)
+        return e >= s
+      end, ssplits(args.interp, "%s+"))))
+    end
+    runtests(args.files, args)
+  else
+
+    local m = project.init({
+      dir = args.dir,
+      env = args.env,
+      lua = args.lua,
+      lua_path_extra = args.lua_path_extra,
+      lua_cpath_extra = args.lua_cpath_extra,
+      config = args.config,
+      iterate = args.iterate,
+      skip_check = args.skip_check,
+      wasm = args.wasm,
+      sanitize = args.sanitize,
+      profile = args.profile,
+      trace = args.trace,
+      single = args.single,
+      openresty_dir = args.openresty_dir,
+      verbosity = args.verbosity,
+    })
+    if args.iterate then
+      m.iterate()
+    else
+      m.test()
+    end
+  end
+
+elseif args.command == "init" then
+
+  project.create_lib({
+    name = args.name,
+    dir = args.dir,
+  })
+
+elseif args.command == "install" then
+
+  local m = project.init({
+    dir = args.dir,
+    env = args.env,
+    config = args.config,
+    luarocks_config = args.luarocks_config,
+    skip_tests = args.skip_tests,
+    verbosity = args.verbosity,
+  })
+
+  m.install({
+    bundled = args.bundled,
+    prefix = args.prefix,
+    bundle_cc = args.bundle_cc,
+    bundle_flags = args.bundle_flags,
+    bundle_mods = args.bundle_mods,
+    bundle_ignores = args.bundle_ignores,
+    wasm = args.wasm,
+  })
+
+elseif args.command == "build" then
+
+  local m = project.init({
+    dir = args.dir,
+    env = args.env,
+    config = args.config,
+    openresty_dir = args.openresty_dir,
+    verbosity = args.verbosity,
+  })
+
+  m.build({ test = args.test })
+
+elseif args.command == "start" then
+
+  local m = project.init({
+    dir = args.dir,
+    env = args.env,
+    config = args.config,
+    background = args.background,
+    openresty_dir = args.openresty_dir,
+    verbosity = args.verbosity,
+  })
+
+  m.start({ test = args.test })
+
+elseif args.command == "stop" then
+
+  local m = project.init({
+    dir = args.dir,
+    env = args.env,
+    config = args.config,
+    openresty_dir = args.openresty_dir,
+    verbosity = args.verbosity,
+  })
+
+  m.stop()
 
 elseif args.command == "lib" and args.init then
 
+  io.stderr:write("Warning: 'toku lib init' is deprecated, use 'toku init' instead\n")
   project.create_lib({
     name = args.name,
     dir = args.dir,
@@ -392,12 +625,15 @@ elseif args.command == "lib" and args.init then
 
 elseif args.command == "web" and args.init then
 
+  io.stderr:write("Warning: 'toku web init' is deprecated, use 'toku init' instead\n")
   project.create_web({
     name = args.name,
     dir = args.dir,
   })
 
 elseif args.command == "lib" then
+
+  io.stderr:write("Warning: 'toku lib' is deprecated, use 'toku test/install' instead\n")
 
   local m = project.init({
     dir = args.dir,
@@ -409,7 +645,6 @@ elseif args.command == "lib" then
     luarocks_config = args.luarocks_config,
     iterate = args.iterate,
     skip_check = args.skip_check or args.start,
-    coverage = args.coverage,
     skip_tests = args.skip_tests,
     wasm = args.wasm,
     sanitize = args.sanitize,
@@ -431,12 +666,22 @@ elseif args.command == "lib" then
   elseif args.release then
     m.release()
   elseif args.install then
-    m.install()
+    m.install({
+      bundled = args.bundled,
+      prefix = args.prefix,
+      bundle_cc = args.bundle_cc,
+      bundle_flags = args.bundle_flags,
+      bundle_mods = args.bundle_mods,
+      bundle_ignores = args.bundle_ignores,
+      wasm = args.wasm,
+    })
   else
     error("invalid command", args.command)
   end
 
 elseif args.command == "web" then
+
+  io.stderr:write("Warning: 'toku web' is deprecated, use 'toku test/build/start/stop' instead\n")
 
   local m = project.init({
     dir = args.dir,
@@ -447,7 +692,6 @@ elseif args.command == "web" then
     test = args.test,
     iterate = args.iterate,
     skip_check = args.skip_check or args.start,
-    coverage = args.coverage or args.start,
     skip_tests = args.skip_tests,
     profile = args.profile,
     trace = args.trace,
