@@ -7,7 +7,6 @@ local project = require("santoku.make.project")
 local runtests = require("santoku.test.runner")
 
 local env = require("santoku.env")
-local var = env.var
 
 local sys = require("santoku.system")
 
@@ -256,6 +255,22 @@ cinstall:option("--bundle-mods", "Modules to preload (comma-separated)"):count("
 cinstall:option("--bundle-ignores", "Modules to ignore (comma-separated)"):count("0-1")
 cinstall:flag("--wasm", "Bundle to WASM")
 
+local crelease = parser
+  :command("release", "Release the project")
+
+crelease:option("--dir", "Top-level build directory"):count("0-1")
+crelease:option("--env", "Environment and build sub-directory"):count("0-1")
+crelease:option("--config", "Config file to use"):count("0-1")
+crelease:flag("--skip-tests", "Skip tests")
+
+local cexec = parser
+  :command("exec", "Execute a command in the build environment")
+
+cexec:option("--dir", "Top-level build directory"):count("0-1")
+cexec:option("--env", "Environment and build sub-directory"):count("0-1")
+cexec:option("--config", "Config file to use"):count("0-1")
+cexec:argument("args", "Arguments"):args("*")
+
 local cbuild = parser
   :command("build", "Build the project")
 
@@ -319,85 +334,6 @@ ctest:option("--lua", "Specify the lua interpreter"):count("0-1")
 ctest:option("--lua-path-extra", "Specify extra lua path dirs"):count("0-1")
 ctest:option("--lua-cpath-extra", "Specify extra lua cpath dirs"):count("0-1")
 ctest:option("--openresty-dir", "Openresty installation directory"):count("0-1")
-
-local function add_cmake_dir_args (cmd)
-  cmd:option("--dir", "Top-level build directory"):count("0-1")
-  cmd:option("--env", "Environment and build sub-directory"):count("0-1")
-  cmd:option("--config", "Config file to use"):count("0-1")
-end
-
-local clib = parser:command("lib", "Manage lua library projects")
-local cweb = parser:command("web", "Manage lua web projects")
-
-add_cmake_dir_args(clib)
-add_cmake_dir_args(cweb)
-
-cweb
-  :option("--openresty-dir", "Openresty installation directory")
-  :default(var("OPENRESTY_DIR", nil))
-
-local clib_init = clib:command("init", "Initialize a new library project")
-local cweb_init = cweb:command("init", "Initialize a new web project")
-
-clib_init:option("--name", "Project name"):count("1")
-cweb_init:option("--name", "Project name"):count("1")
-
-local clib_test = clib:command("test", "Run project tests")
-local cweb_test = cweb:command("test", "Run project tests")
-
-clib_test:flag("--iterate", "Iteratively run tests")
-cweb_test:flag("--iterate", "Iteratively run tests")
-
-clib_test:flag("--wasm", "Run in WASM mode")
-
-clib_test:flag("--profile", "Report the performance profile")
-cweb_test:flag("--profile", "Report the performance profile")
-
-clib_test:flag("--trace", "Enable source tracing")
-cweb_test:flag("--trace", "Enable source tracing")
-
-clib_test:flag("--skip-check", "Skip luacheck")
-cweb_test:flag("--skip-check", "Skip luacheck")
-
-clib_test:flag("--sanitize", "Enable sanitizers")
-
-clib_test:option("--single", "Run a single test"):count("0-1")
-cweb_test:option("--single", "Run a single test"):count("0-1")
-
-clib_test:option("--lua", "Specify the lua interpreter"):count("0-1")
-clib_test:option("--lua-path-extra", "Specify extra lua path dirs"):count("0-1")
-clib_test:option("--lua-cpath-extra", "Specify extra lua cpath dirs"):count("0-1")
-
-local clib_release = clib:command("release", "Release the library")
-local clib_install = clib:command("install", "Install the library")
-
-clib_release:flag("--skip-tests", "Skip tests")
-clib_install:flag("--skip-tests", "Skip tests")
-
-clib_install:option("--luarocks-config", "Luarocks config file to use",
-  nil, nil, "?", "?")
-
-clib_install:flag("--bundled", "Bundle executables from bin/ to standalone")
-clib_install:option("--prefix", "Install prefix for bundled executables"):count("0-1")
-clib_install:option("--bundle-cc", "Compiler for bundling"):count("0-1")
-clib_install:option("--bundle-flags", "Compiler flags for bundling"):count("0-1")
-clib_install:option("--bundle-mods", "Modules to preload (comma-separated)"):count("0-1")
-clib_install:option("--bundle-ignores", "Modules to ignore (comma-separated)"):count("0-1")
-clib_install:flag("--wasm", "Bundle to WASM")
-
-local clib_exec = clib:command("exec", "Execute a command in the build environment")
-clib_exec:handle_options(false)
-clib_exec:argument("args", "Arguments"):args("*")
-
-local cweb_start = cweb:command("start", "Start the server")
-
-cweb_start:flag("--background", "Run in background")
-cweb_start:flag("--test", "Start the test environment")
-
-local cweb_build = cweb:command("build", "Build the server")
-cweb_build:flag("--test", "Build the test environment")
-
-cweb:command("stop", "Start the server")
 
 local args = parser:parse()
 args.luarocks_config = args.luarocks_config and args.luarocks_config[1] or nil
@@ -552,7 +488,7 @@ elseif args.command == "test" then
 
 elseif args.command == "init" then
 
-  project.create_lib({
+  project.create({
     name = args.name,
     dir = args.dir,
   })
@@ -577,6 +513,33 @@ elseif args.command == "install" then
     bundle_ignores = args.bundle_ignores,
     wasm = args.wasm,
   })
+
+elseif args.command == "release" then
+
+  local m = project.init({
+    dir = args.dir,
+    env = args.env,
+    config = args.config,
+    skip_tests = args.skip_tests,
+    verbosity = args.verbosity,
+  })
+
+  if m.release then
+    m.release()
+  else
+    io.stderr:write("Release not available (public != true in make.lua)\n")
+  end
+
+elseif args.command == "exec" then
+
+  local m = project.init({
+    dir = args.dir,
+    env = args.env,
+    config = args.config,
+    verbosity = args.verbosity,
+  })
+
+  m.exec(args.args)
 
 elseif args.command == "build" then
 
@@ -614,105 +577,6 @@ elseif args.command == "stop" then
   })
 
   m.stop()
-
-elseif args.command == "lib" and args.init then
-
-  io.stderr:write("Warning: 'toku lib init' is deprecated, use 'toku init' instead\n")
-  project.create_lib({
-    name = args.name,
-    dir = args.dir,
-  })
-
-elseif args.command == "web" and args.init then
-
-  io.stderr:write("Warning: 'toku web init' is deprecated, use 'toku init' instead\n")
-  project.create_web({
-    name = args.name,
-    dir = args.dir,
-  })
-
-elseif args.command == "lib" then
-
-  io.stderr:write("Warning: 'toku lib' is deprecated, use 'toku test/install' instead\n")
-
-  local m = project.init({
-    dir = args.dir,
-    env = args.env,
-    lua = args.lua,
-    lua_path_extra = args.lua_path_extra,
-    lua_cpath_extra = args.lua_cpath_extra,
-    config = args.config,
-    luarocks_config = args.luarocks_config,
-    iterate = args.iterate,
-    skip_check = args.skip_check or args.start,
-    skip_tests = args.skip_tests,
-    wasm = args.wasm,
-    sanitize = args.sanitize,
-    profile = args.profile,
-    trace = args.trace,
-    single = args.single,
-    verbosity = args.verbosity,
-  })
-
-  if args.exec then
-
-
-
-    m.exec(args.args)
-  elseif args.test and args.iterate then
-    m.iterate()
-  elseif args.test and not args.iterate then
-    m.test()
-  elseif args.release then
-    m.release()
-  elseif args.install then
-    m.install({
-      bundled = args.bundled,
-      prefix = args.prefix,
-      bundle_cc = args.bundle_cc,
-      bundle_flags = args.bundle_flags,
-      bundle_mods = args.bundle_mods,
-      bundle_ignores = args.bundle_ignores,
-      wasm = args.wasm,
-    })
-  else
-    error("invalid command", args.command)
-  end
-
-elseif args.command == "web" then
-
-  io.stderr:write("Warning: 'toku web' is deprecated, use 'toku test/build/start/stop' instead\n")
-
-  local m = project.init({
-    dir = args.dir,
-    env = args.env,
-    config = args.config,
-    luarocks_config = args.luarocks_config,
-    background = args.background,
-    test = args.test,
-    iterate = args.iterate,
-    skip_check = args.skip_check or args.start,
-    skip_tests = args.skip_tests,
-    profile = args.profile,
-    trace = args.trace,
-    single = args.single,
-    openresty_dir = args.openresty_dir,
-    verbosity = args.verbosity,
-  })
-
-  if args.build then
-    m.build({ test = args.test })
-  elseif args.start then
-    m.start({ test = args.test })
-  elseif args.stop then
-    m.stop()
-  elseif args.test and args.iterate then
-    m.iterate()
-  elseif args.test and not args.iterate then
-    m.test()
-  else
-    error("invalid command")
-  end
 
 elseif args.command == "lua" then
 
