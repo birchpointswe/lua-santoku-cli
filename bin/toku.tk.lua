@@ -238,6 +238,7 @@ local cinit = parser
 
 cinit:option("--name", "Project name"):count("1")
 cinit:option("--dir", "Project directory"):count("0-1")
+cinit:flag("--web", "Initialize a web project (default: library project)")
 
 local cinstall = parser
   :command("install", "Install the project")
@@ -334,6 +335,9 @@ ctest:option("--lua", "Specify the lua interpreter"):count("0-1")
 ctest:option("--lua-path-extra", "Specify extra lua path dirs"):count("0-1")
 ctest:option("--lua-cpath-extra", "Specify extra lua cpath dirs"):count("0-1")
 ctest:option("--openresty-dir", "Openresty installation directory"):count("0-1")
+ctest:flag("--root", "Run root-level tests only (web projects)")
+ctest:flag("--client", "Run client tests only (web projects)")
+ctest:flag("--server", "Run server tests only (web projects)")
 
 local args = parser:parse()
 
@@ -477,6 +481,9 @@ elseif args.command == "test" then
       single = args.single,
       openresty_dir = args.openresty_dir,
       verbosity = args.verbosity,
+      test_root = args.root,
+      test_client = args.client,
+      test_server = args.server,
     })
     if args.iterate then
       m.iterate()
@@ -487,10 +494,17 @@ elseif args.command == "test" then
 
 elseif args.command == "init" then
 
-  project.create({
-    name = args.name,
-    dir = args.dir,
-  })
+  if args.web then
+    project.create_web({
+      name = args.name,
+      dir = args.dir,
+    })
+  else
+    project.create_lib({
+      name = args.name,
+      dir = args.dir,
+    })
+  end
 
 elseif args.command == "install" then
 
