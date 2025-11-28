@@ -299,6 +299,18 @@ cstop:option("--env", "Environment and build sub-directory"):count("0-1")
 cstop:option("--config", "Config file to use"):count("0-1")
 cstop:option("--openresty-dir", "Openresty installation directory"):count("0-1")
 
+local cclean = parser
+  :command("clean", "Clean build artifacts")
+
+cclean:option("--env", "Environment to clean (default: 'default', or all with --all)"):count("0-1")
+cclean:option("--config", "Config file to use"):count("0-1")
+cclean:flag("--all", "Remove entire build directory")
+cclean:flag("--deps", "Remove dependencies (lua_modules)")
+cclean:flag("--wasm", "Remove only WASM compiled artifacts (web projects)")
+cclean:flag("--client", "Only clean client (web projects)")
+cclean:flag("--server", "Only clean server (web projects)")
+cclean:flag("--dry-run", "Show what would be removed without removing")
+
 local ctest = parser
   :command("test", "Run tests")
 
@@ -590,6 +602,37 @@ elseif args.command == "stop" then
   })
 
   m.stop()
+
+elseif args.command == "clean" then
+
+  local m = project.init({
+    env = args.env or "default",
+    config = args.config,
+    verbosity = args.verbosity,
+  })
+
+  local removed = m.clean({
+    all = args.all,
+    deps = args.deps,
+    wasm = args.wasm,
+    client = args.client,
+    server = args.server,
+    dry_run = args.dry_run,
+    env = args.env,
+  })
+
+  if args.dry_run then
+    io.stdout:write("Would remove:\n")
+  else
+    io.stdout:write("Removed:\n")
+  end
+  if removed and #removed > 0 then
+    for fp in ivals(removed) do
+      io.stdout:write("  " .. fp .. "\n")
+    end
+  else
+    io.stdout:write("  (nothing to clean)\n")
+  end
 
 elseif args.command == "lua" then
 
