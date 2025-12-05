@@ -264,6 +264,14 @@ crelease:option("--env", "Environment and build sub-directory"):count("0-1")
 crelease:option("--config", "Config file to use"):count("0-1")
 crelease:flag("--skip-tests", "Skip tests")
 
+local cpack = parser
+  :command("pack", "Build rockspec and tarball without releasing")
+
+cpack:option("--dir", "Top-level build directory"):count("0-1")
+cpack:option("--env", "Environment and build sub-directory"):count("0-1")
+cpack:option("--config", "Config file to use"):count("0-1")
+cpack:flag("--skip-tests", "Skip tests")
+
 local cexec = parser
   :command("exec", "Execute a command in the build environment")
 
@@ -287,7 +295,7 @@ local cstart = parser
 cstart:option("--dir", "Top-level build directory"):count("0-1")
 cstart:option("--env", "Environment and build sub-directory"):count("0-1")
 cstart:option("--config", "Config file to use"):count("0-1")
-cstart:flag("--background", "Run in background")
+cstart:flag("--fg", "Run in foreground (exec to openresty)")
 cstart:flag("--test", "Start the test environment")
 cstart:option("--openresty-dir", "Openresty installation directory"):count("0-1")
 
@@ -555,6 +563,22 @@ elseif args.command == "release" then
     io.stderr:write("Release not available (public != true in make.lua)\n")
   end
 
+elseif args.command == "pack" then
+
+  local m = project.init({
+    dir = args.dir,
+    env = args.env,
+    config = args.config,
+    skip_tests = args.skip_tests,
+    verbosity = args.verbosity,
+  })
+
+  if m.pack then
+    m.pack()
+  else
+    io.stderr:write("Pack not available for this project type\n")
+  end
+
 elseif args.command == "exec" then
 
   local m = project.init({
@@ -584,12 +608,11 @@ elseif args.command == "start" then
     dir = args.dir,
     env = args.env,
     config = args.config,
-    background = args.background,
     openresty_dir = args.openresty_dir,
     verbosity = args.verbosity,
   })
 
-  m.start({ test = args.test })
+  m.start({ test = args.test, fg = args.fg })
 
 elseif args.command == "stop" then
 
