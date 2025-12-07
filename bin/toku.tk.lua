@@ -36,6 +36,8 @@ local mkdirp = fs.mkdirp
 local files = fs.files
 local writefile = fs.writefile
 local dirname = fs.dirname
+local basename = fs.basename
+local cwd = fs.cwd
 local stdin = io.stdin
 local stdout = io.stdout
 
@@ -236,7 +238,9 @@ cmustache
 local cinit = parser
   :command("init", "Initialize a new project")
 
-cinit:option("--name", "Project name"):count("1")
+cinit:mutex(
+  cinit:option("--name", "Project name"):count("0-1"),
+  cinit:flag("--here", "Initialize in current directory, using directory name as project name"))
 cinit:option("--dir", "Project directory"):count("0-1")
 cinit:flag("--web", "Initialize a web project (default: library project)")
 
@@ -358,6 +362,7 @@ ctest:option("--openresty-dir", "Openresty installation directory"):count("0-1")
 ctest:flag("--root", "Run root-level tests only (web projects)")
 ctest:flag("--client", "Run client tests only (web projects)")
 ctest:flag("--server", "Run server tests only (web projects)")
+ctest:flag("--show-logs", "Show server access/error logs during tests (web projects)")
 
 local args = parser:parse()
 
@@ -504,6 +509,7 @@ elseif args.command == "test" then
       test_root = args.root,
       test_client = args.client,
       test_server = args.server,
+      show_logs = args.show_logs,
     })
     if args.iterate then
       m.iterate()
@@ -514,15 +520,27 @@ elseif args.command == "test" then
 
 elseif args.command == "init" then
 
+  local name, dir
+  if args.here then
+    name = basename(cwd())
+    dir = "."
+  else
+    if not args.name then
+      parser:error("either --name or --here must be provided")
+    end
+    name = args.name
+    dir = args.dir
+  end
+
   if args.web then
     project.create_web({
-      name = args.name,
-      dir = args.dir,
+      name = name,
+      dir = dir,
     })
   else
     project.create_lib({
-      name = args.name,
-      dir = args.dir,
+      name = name,
+      dir = dir,
     })
   end
 
