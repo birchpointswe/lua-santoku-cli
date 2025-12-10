@@ -1,18 +1,12 @@
 local err = require("santoku.error")
 local error = err.error
-
 local argparse = require("argparse")
 local bundle = require("santoku.bundle")
 local project = require("santoku.make.project")
 local runtests = require("santoku.test.runner")
-
 local env = require("santoku.env")
-
 local sys = require("santoku.system")
-
 local arr = require("santoku.array")
-local push = arr.push
-
 local inherit = require("santoku.inherit")
 local pushindex = inherit.pushindex
 
