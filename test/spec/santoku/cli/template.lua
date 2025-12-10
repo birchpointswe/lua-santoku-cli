@@ -14,9 +14,6 @@ local assert = err.assert
 local env = require("santoku.env")
 local var = env.var
 
-local iter = require("santoku.iter")
-local first = iter.first
-
 local sys = require("santoku.system")
 local sh = sys.sh
 
@@ -26,7 +23,7 @@ test("template", function ()
     local toku = var("LUA") .. " -l luacov bin/toku.lua"
     local cmd = "echo '<% return \"hello\" %>' | " ..
     toku .. " template -f - -o -"
-    assert(eq("hello", first(sh({ "sh", "-c", cmd }))))
+    assert(eq("hello", sh({ "sh", "-c", cmd })()))
   end)
 
 end)

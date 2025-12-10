@@ -12,7 +12,6 @@ local sys = require("santoku.system")
 
 local arr = require("santoku.array")
 local push = arr.push
-local extend = arr.extend
 
 local inherit = require("santoku.inherit")
 local pushindex = inherit.pushindex
@@ -21,13 +20,6 @@ local str = require("santoku.string")
 local ssub = str.sub
 local ssplits = str.splits
 local startswith = str.startswith
-
-local iter = require("santoku.iter")
-local collect = iter.collect
-local map = iter.map
-local filter = iter.filter
-local flatten = iter.flatten
-local ivals = iter.ivals
 
 local fs = require("santoku.fs")
 local runfile = fs.runfile
@@ -371,7 +363,10 @@ local function template_file (conf, input, output, write_deps, config)
   mkdirp(dirname(output))
   writefile(output == "-" and stdout or output, out)
   if write_deps and deps and output ~= "-" then
-    writefile(output .. ".d", serialize_deps(input, output, push(extend({}, deps), config)))
+    local all_deps = {}
+    for i = 1, #deps do all_deps[i] = deps[i] end
+    if config then all_deps[#all_deps + 1] = config end
+    writefile(output .. ".d", serialize_deps(input, output, all_deps))
   end
 end
 
@@ -458,7 +453,15 @@ elseif args.command == "bundle" then
     luac = true
   end
 
-  local flags = collect(map(ssub, flatten(map(ssplits, ivals(args.flags)))))
+  local flags = {}
+  for _, flag in ipairs(args.flags) do
+    local parts = ssplits(flag, "%s+")
+    for i = 1, #parts do
+      if parts[i] ~= "" then
+        flags[#flags + 1] = parts[i]
+      end
+    end
+  end
 
   local close = args.close or args.no_close or nil
 
@@ -483,9 +486,14 @@ elseif args.command == "test" then
   if #args.files > 0 then
 
     if args.interp then
-      args.interp = collect(map(ssub, filter(function (_, s, e)
-        return e >= s
-      end, ssplits(args.interp, "%s+"))))
+      local parts = ssplits(args.interp, "%s+")
+      local interp = {}
+      for i = 1, #parts do
+        if parts[i] ~= "" then
+          interp[#interp + 1] = parts[i]
+        end
+      end
+      args.interp = interp
     end
     runtests(args.files, args)
   else
@@ -668,7 +676,7 @@ elseif args.command == "clean" then
     io.stdout:write("Removed:\n")
   end
   if removed and #removed > 0 then
-    for fp in ivals(removed) do
+    for _, fp in ipairs(removed) do
       io.stdout:write("  " .. fp .. "\n")
     end
   else
