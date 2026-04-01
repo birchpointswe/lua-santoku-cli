@@ -353,14 +353,15 @@ ctest:flag("--show-logs", "Show server access/error logs during tests (web proje
 local args = parser:parse()
 
 local function template_file (conf, input, output, write_deps, config)
-  local out, deps = renderfile(input == "-" and stdin or input, conf.env)
+  local deps = {}
+  conf.env = conf.env or {}
+  conf.env.readfile = function (fp) deps[fp] = true; return fs.readfile(fp) end
+  local out = renderfile(input == "-" and stdin or input, conf.env)
   mkdirp(dirname(output))
   writefile(output == "-" and stdout or output, out)
-  if write_deps and deps and output ~= "-" then
-    local all_deps = {}
-    for i = 1, #deps do all_deps[i] = deps[i] end
-    if config then all_deps[#all_deps + 1] = config end
-    writefile(output .. ".d", serialize_deps(input, output, all_deps))
+  if write_deps and output ~= "-" then
+    if config then deps[config] = true end
+    writefile(output .. ".d", serialize_deps(input, output, deps))
   end
 end
 
