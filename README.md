@@ -21,7 +21,7 @@ The `toku` command provides several subcommands for different development tasks:
 
 Process template files with embedded Lua code. For complete template syntax
 documentation, see
-[lua-santoku-template](https://github.com/treadwelllane/lua-santoku-template).
+[lua-santoku-template](https://github.com/birchpointswe/lua-santoku-template).
 
 | Option | Arguments | Description |
 |--------|-----------|-------------|
@@ -36,7 +36,7 @@ documentation, see
 
 Create standalone executables from Lua scripts by bundling dependencies and
 compiling to native code. For complete bundling documentation, see
-[lua-santoku-bundle](https://github.com/treadwelllane/lua-santoku-bundle).
+[lua-santoku-bundle](https://github.com/birchpointswe/lua-santoku-bundle).
 
 | Option | Arguments | Description |
 |--------|-----------|-------------|
