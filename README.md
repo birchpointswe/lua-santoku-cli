@@ -1,150 +1,82 @@
 # santoku-cli
 
-A command line interface to the santoku lua library providing tools for template
-processing, bundling executables, running tests, and managing Lua library/web
-projects.
+`toku`, the command-line front end for the santoku project framework. It drives
+[santoku-make](../lua-santoku-make/README.md) to build, test, install, and release
+Lua projects (libraries, bin executables, and web apps), and it exposes a few
+standalone utilities that wrap other santoku libraries.
 
-## Overview
+This README is a usage guide, not an API reference. For the project model (the
+`make*.lua` descriptor, the build lifecycle, project types, variants, and worked
+examples) see the [santoku-make guide](../lua-santoku-make/doc/usage.md); `toku` is
+the command surface over it.
 
-The `toku` command provides several subcommands for different development tasks:
+## Project commands
 
-- **`template`** - Process template files with Lua code interpolation
-- **`bundle`** - Create standalone executables from Lua scripts
-- **`lua`** - Enhanced Lua interpreter with profiling and tracing
-- **`test`** - Test runner with pattern matching
-- **`lib`** - Manage Lua library projects
-- **`web`** - Manage Lua web projects with OpenResty
+These operate on a project in the current directory (a `make.lua` or
+`make.common.lua`). They share `--dir` (build root, default `build`), `--env`
+(profile/sub-directory, default `default`, selecting `make.<env>.lua`), and
+`--config` (explicit descriptor path).
 
-## Commands
+| Command | What it does |
+|---------|--------------|
+| `toku init` | Scaffold a new project (`--name` or `--here`, `--web` for a web project). |
+| `toku build` | Render templates and compile. `--test` builds the test environment. |
+| `toku test` | Build the test env and run the suite + `luacheck`. Key flags: `--match`, `--single`, `--stop`, `--iterate` (re-run on change), `--skip-check`, `--profile`, `--trace`, `--wasm`. With positional files it runs them directly instead of the project. |
+| `toku install` | `luarocks make` the built rock. `--bundled` instead bundles `bin/` into standalone executables (`--prefix`, `--bundle-cc`, `--bundle-flags`, ...); `--skip-tests` to skip the test gate; `--wasm` for a WASM bundle. |
+| `toku pack` | Build the rockspec + source tarball without publishing (public lib projects). |
+| `toku release` | `pack`, then tag, push, create a GitHub release, and upload to luarocks (public lib projects). `--skip-tests` to skip the gate. |
+| `toku exec ...` | Run a command with the project's `LUA_PATH`/`LUA_CPATH` set. |
+| `toku clean` | Remove build artifacts. `--all` (whole build dir), `--deps` (installed modules), `--dry-run`. |
+| `toku start` / `toku stop` | Start/stop the dev server (web projects; OpenResty). `--fg` runs in the foreground, `--test` uses the test env. |
 
-### `toku template`
+Project discovery, profile selection, and the build directory layout
+(`build/<env>/{build,test}`) are described in the make guide. Web-specific test
+flags (`--client`, `--server`, `--root`, `--show-logs`) and `--openresty-dir` also
+apply where relevant.
 
-Process template files with embedded Lua code. For complete template syntax
-documentation, see
-[lua-santoku-template](https://github.com/birchpointswe/lua-santoku-template).
+## Utility commands
 
-| Option | Arguments | Description |
-|--------|-----------|-------------|
-| `-f`, `--file` | `FILE` | Input template file (use "-" for stdin) |
-| `-d`, `--directory` | `DIR` | Input directory of templates |
-| `-o`, `--output` | `PATH` | Output file or directory (required) |
-| `-c`, `--config` | `FILE` | Configuration file with environment variables |
-| `-M`, `--deps` | | Generate make dependency files (.d) |
-| `-t`, `--trim` | `PREFIX` | Remove prefix from directory paths in output |
+These do not require a project; each wraps the same-named library. See those repos
+for the full semantics.
 
-### `toku bundle`
+- `toku template` ([santoku-template](../lua-santoku-template/README.md)): render
+  `<% %>` Lua templates. `-f`/`-d` input, `-o` output, `-c` config, `-M` for `.d`
+  deps, `-t` to trim a path prefix.
+- `toku mustache` ([santoku-mustache](../lua-santoku-mustache/README.md)): render
+  Mustache templates. Same `-f`/`-d`/`-o`/`-c`/`-t` shape.
+- `toku bundle` ([santoku-bundle](../lua-santoku-bundle/README.md)): bundle a Lua
+  entry point and its dependencies into a standalone C executable. `--input`,
+  `--output-directory`, `--path`/`--cpath`, `--cc`, `--flags`, `--mod`, `--ignore`,
+  and the `--luac*` controls.
+- `toku lua`: run a Lua interpreter (`--file` or `--string`) with optional
+  `--profile`, `--trace`, `--serialize`, and `--lua` to pick the interpreter.
 
-Create standalone executables from Lua scripts by bundling dependencies and
-compiling to native code. For complete bundling documentation, see
-[lua-santoku-bundle](https://github.com/birchpointswe/lua-santoku-bundle).
+`--verbosity` is a global flag.
 
-| Option | Arguments | Description |
-|--------|-----------|-------------|
-| `--input` | `FILE` | Input Lua file (required) |
-| `--output-directory` | `DIR` | Output directory (required) |
-| `--output-prefix` | `PREFIX` | Prefix for output files |
-| `--path` | `PATH` | LUA_PATH for module resolution |
-| `--cpath` | `CPATH` | LUA_CPATH for C module resolution |
-| `--env` | `KEY VALUE` | Set runtime environment variables |
-| `--mod` | `MODULE` | Load modules during startup |
-| `--flags` | `FLAGS` | Compiler command-line flags |
-| `--cc` | `COMPILER` | Set the C compiler |
-| `--luac` | `COMMAND` | Custom luac command |
-| `--luac-off` | | Disable luac compilation step |
-| `--xxd` | `COMMAND` | Custom xxd command for binary data |
-| `--ignore` | `MODULE` | Skip bundling specific modules |
-| `--deps` | | Generate make dependency file |
-| `--deps-target` | `TARGET` | Override dependency target name |
-| `--close` / `--no-close` | | Control lua_close() behavior |
+## Typical workflow
 
-### `toku lua`
+```sh
+toku init --name my-lib          # scaffold (--web for a web app)
+# edit lib/, test/spec/, declare deps in make.lua
+toku test --iterate              # develop, re-running tests on change
+toku install                     # install locally via luarocks
+toku release                     # public libs: tag + GitHub release + luarocks upload
+```
 
-Run Lua code with enhanced capabilities including profiling, tracing, and auto-serialization.
+For a web app the inner loop is `toku build --test`, `toku start --test`, `toku
+test`, `toku stop`.
 
-| Option | Arguments | Description |
-|--------|-----------|-------------|
-| `--file` | `FILE` | Lua file to execute |
-| `--string` | `STRING` | Lua string to execute |
-| `--profile` | | Enable profiling |
-| `--trace` | | Enable source tracing |
-| `--serialize` | | Auto-serialize output |
-| `--lua` | `INTERPRETER` | Specify custom interpreter |
+## Dependencies
 
-### `toku test`
+`toku` pulls in santoku-make (the framework), santoku-template and santoku-mustache
+(templating), santoku-bundle (executable bundling), santoku-test-runner (the test
+runner), santoku-fs/santoku-system (file and process glue), and argparse (argument
+parsing).
 
-Run test suites with pattern matching and various output options.
+## Building / testing
 
-| Option | Arguments | Description |
-|--------|-----------|-------------|
-| `--match` | `PATTERN` | Run tests matching pattern |
-| `--stop` | | Stop on first error |
-| `--interp` | `INTERPRETER` | Use custom interpreter |
-
-### `toku lib`
-
-Manage Lua library projects.
-
-| Subcommand | Description |
-|------------|-------------|
-| `init` | Initialize new library project |
-| `test` | Run tests |
-| `release` | Release the library |
-| `install` | Install locally |
-
-#### lib options
-
-| Option | Arguments | Description |
-|--------|-----------|-------------|
-| `--dir` | `DIR` | Build directory |
-| `--env` | `ENV` | Environment name |
-| `--config` | `FILE` | Configuration file |
-| `--coverage` | | Enable coverage reporting |
-| `--profile` | | Performance profiling |
-| `--trace` | | Source tracing |
-| `--skip-check` | | Skip luacheck linting |
-| `--single` | `TEST` | Run single test file |
-
-### `toku web`
-
-Manage OpenResty-based web applications.
-
-| Subcommand | Description |
-|------------|-------------|
-| `init` | Initialize new web project |
-| `start` | Start development server |
-| `build` | Build the application |
-| `stop` | Stop the server |
-| `test` | Run web tests |
-
-#### web options
-
-| Option | Arguments | Description |
-|--------|-----------|-------------|
-| `--dir` | `DIR` | Build directory |
-| `--env` | `ENV` | Environment name |
-| `--config` | `FILE` | Configuration file |
-| `--coverage` | | Enable coverage reporting |
-| `--profile` | | Performance profiling |
-| `--trace` | | Source tracing |
-| `--skip-check` | | Skip luacheck linting |
-| `--single` | `TEST` | Run single test file |
-| `--openresty-dir` | `DIR` | OpenResty installation directory |
-| `--background` | | Run server in background |
-| `--test` | | Use test environment |
-
-## Global Options
-
-| Option | Arguments | Description |
-|--------|-----------|-------------|
-| `--verbosity` | `LEVEL` | Set verbosity level (0-1) |
-
-## Environment Variables
-
-The CLI respects several environment variables:
-
-- `OPENRESTY_DIR` - Default OpenResty installation directory for web projects
-- `LUA` - Lua interpreter to use
-- Various build-related variables (CC, CFLAGS, etc.)
+This repo uses the `toku` harness (it builds itself). The entry point is
+`bin/toku.tk.lua`. Run the suite through `toku`.
 
 ## License
 

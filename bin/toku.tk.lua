@@ -339,7 +339,6 @@ ctest:flag("--wasm", "Run in WASM mode")
 ctest:flag("--profile", "Report the performance profile")
 ctest:flag("--trace", "Enable source tracing")
 ctest:flag("--skip-check", "Skip luacheck")
-ctest:flag("--sanitize", "Enable sanitizers")
 ctest:option("--single", "Run a single test"):count("0-1")
 ctest:option("--lua", "Specify the lua interpreter"):count("0-1")
 ctest:option("--lua-path-extra", "Specify extra lua path dirs"):count("0-1")
@@ -503,7 +502,6 @@ elseif args.command == "test" then
       iterate = args.iterate,
       skip_check = args.skip_check,
       wasm = args.wasm,
-      sanitize = args.sanitize,
       profile = args.profile,
       trace = args.trace,
       single = args.single,
