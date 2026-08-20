@@ -262,6 +262,13 @@ cpack:option("--env", "Environment and build sub-directory"):count("0-1")
 cpack:option("--config", "Config file to use"):count("0-1")
 cpack:flag("--skip-tests", "Skip tests")
 
+local cvendor = parser
+  :command("vendor", "Fetch and verify vendored third-party sources")
+
+cvendor:option("--dir", "Top-level build directory"):count("0-1")
+cvendor:option("--env", "Environment and build sub-directory"):count("0-1")
+cvendor:option("--config", "Config file to use"):count("0-1")
+
 local cexec = parser
   :command("exec", "Execute a command in the build environment")
 
@@ -329,7 +336,6 @@ ctest
 ctest
   :argument("files")
   :args("*")
-
 
 ctest:option("--dir", "Top-level build directory"):count("0-1")
 ctest:option("--env", "Environment and build sub-directory"):count("0-1")
@@ -596,6 +602,21 @@ elseif args.command == "pack" then
     m.pack()
   else
     io.stderr:write("Pack not available for this project type\n")
+  end
+
+elseif args.command == "vendor" then
+
+  local m = project.init({
+    dir = args.dir,
+    env = args.env,
+    config = args.config,
+    verbosity = args.verbosity,
+  })
+
+  if m.vendor then
+    m.vendor()
+  else
+    io.stderr:write("Vendor not available for this project type\n")
   end
 
 elseif args.command == "exec" then
