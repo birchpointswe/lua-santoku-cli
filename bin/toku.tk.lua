@@ -31,8 +31,6 @@ local template = require("santoku.template")
 local renderfile = template.renderfile
 local serialize_deps = template.serialize_deps
 
-local mustache = require("santoku.mustache")
-
 local parser = argparse()
   :name("toku")
   :description("A command line interface to the santoku lua library")
@@ -189,34 +187,6 @@ ctemplate
   :count("?")
 
 ctemplate
-  :option("-c --config", "A configuration file")
-  :args(1)
-  :count("0-1")
-
-local cmustache = parser
-  :command("mustache", "Process mustache templates")
-
-cmustache:mutex(
-  cmustache
-    :option("-f --file", "Input file")
-    :args(1)
-    :count("0-1"),
-  cmustache
-    :option("-d --directory", "Input directory")
-    :args(1)
-    :count("0-1"))
-
-cmustache
-  :option("-o --output", "Output file or directory")
-  :args(1)
-  :count(1)
-
-cmustache
-  :option("-t --trim", "Prefix to remove from directory prefix before output")
-  :args(1)
-  :count("?")
-
-cmustache
   :option("-c --config", "A configuration file")
   :args(1)
   :count("0-1")
@@ -391,45 +361,6 @@ if args.command == "template" then
     template_files(conf, args.trim, args.directory, md, args.output, args.deps, args.config)
   elseif args.file then
     template_file(conf, args.file, args.output, args.deps, args.config)
-  else
-    parser:error("either -f --file or -d --directory must be provided")
-  end
-
-elseif args.command == "mustache" then
-
-  local run_env = pushindex({}, _G)
-  local conf = args.config and runfile(args.config, run_env) or {}
-
-  local function mustache_file(input, output)
-    local content = input == "-" and stdin:read("*a") or fs.readfile(input)
-    local out = mustache(content, conf)
-    mkdirp(dirname(output))
-    writefile(output == "-" and stdout or output, out)
-  end
-
-  local function mustache_files(trim, input, md, output)
-    if md == "directory" then
-      for fp in files(input, true) do
-        mustache_files(trim, fp, md, output)
-      end
-    elseif md == "file" then
-      local outfile = input
-      if trim and startswith(outfile, trim) then
-        outfile = ssub(outfile, #trim + 1)
-      end
-      output = fs.join(output, outfile)
-      mustache_file(input, output)
-    else
-      error("Unexpected mode", md, "for file", input)
-    end
-  end
-
-  if args.directory then
-    mkdirp(args.output)
-    local md = mode(args.directory)
-    mustache_files(args.trim, args.directory, md, args.output)
-  elseif args.file then
-    mustache_file(args.file, args.output)
   else
     parser:error("either -f --file or -d --directory must be provided")
   end

@@ -42,8 +42,6 @@ for the full semantics.
 - `toku template` ([santoku-template](../lua-santoku-template/README.md)): render
   `<% %>` Lua templates. `-f`/`-d` input, `-o` output, `-c` config, `-M` for `.d`
   deps, `-t` to trim a path prefix.
-- `toku mustache` ([santoku-mustache](../lua-santoku-mustache/README.md)): render
-  Mustache templates. Same `-f`/`-d`/`-o`/`-c`/`-t` shape.
 - `toku bundle` ([santoku-bundle](../lua-santoku-bundle/README.md)): bundle a Lua
   entry point and its dependencies into a standalone C executable. `--input`,
   `--output-directory`, `--path`/`--cpath`, `--cc`, `--flags`, `--mod`, `--ignore`,
@@ -68,9 +66,9 @@ test`, `toku stop`.
 
 ## Dependencies
 
-`toku` pulls in santoku-make (the framework), santoku-template and santoku-mustache
-(templating), santoku-bundle (executable bundling), santoku-test-runner (the test
-runner), santoku-fs/santoku-system (file and process glue), and argparse (argument
+`toku` pulls in santoku-make (the framework), santoku-template (templating),
+santoku-bundle (executable bundling), santoku-test-runner (the test runner),
+santoku-fs/santoku-system (file and process glue), and argparse (argument
 parsing).
 
 ## Building / testing
