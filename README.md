@@ -5,6 +5,9 @@
 Lua projects (libraries, bin executables, and web apps), and it exposes a few
 standalone utilities that wrap other santoku libraries.
 
+Documentation and runnable examples: [santoku.dev](https://santoku.dev), under the
+`santoku-cli` tab.
+
 This README is a usage guide, not an API reference. For the project model (the
 `make*.lua` descriptor, the build lifecycle, project types, variants, and worked
 examples) see the [santoku-make guide](../lua-santoku-make/doc/usage.md); `toku` is
@@ -21,7 +24,7 @@ These operate on a project in the current directory (a `make.lua` or
 |---------|--------------|
 | `toku init` | Scaffold a new project (`--name` or `--here`, `--web` for a web project). |
 | `toku build` | Render templates and compile. `--test` builds the test environment. |
-| `toku test` | Build the test env and run the suite + `luacheck`. Key flags: `--match`, `--single`, `--stop`, `--iterate` (re-run on change), `--skip-check`, `--profile`, `--trace`, `--wasm`. With positional files it runs them directly instead of the project. |
+| `toku test` | Build the test env and run the suite + `luacheck`. Key flags: `--match <lua-pattern>` (keep only spec files whose path matches), `--single`, `--stop`, `--iterate` (re-run on change), `--skip-check`, `--profile`, `--trace`, `--wasm`. With positional files it runs them directly instead of the project. |
 | `toku install` | `luarocks make` the built rock. `--bundled` instead bundles `bin/` into standalone executables (`--prefix`, `--bundle-cc`, `--bundle-flags`, ...); `--skip-tests` to skip the test gate; `--wasm` for a WASM bundle. |
 | `toku pack` | Build the rockspec + source tarball without publishing (public lib projects). |
 | `toku release` | `pack`, then tag, push, create a GitHub release, and upload to luarocks (public lib projects). `--skip-tests` to skip the gate. |

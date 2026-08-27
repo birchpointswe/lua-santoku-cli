@@ -283,7 +283,7 @@ local ctest = parser
   :command("test", "Run tests")
 
 ctest
-  :option("-m --match", "Only load the matching files")
+  :option("-m --match", "Only run test files matching the lua pattern")
   :args(1)
   :count("0-1")
 
@@ -435,6 +435,7 @@ elseif args.command == "test" then
       profile = args.profile,
       trace = args.trace,
       single = args.single,
+      match = args.match,
       openresty_dir = args.openresty_dir,
       verbosity = args.verbosity,
       test_root = args.root,
