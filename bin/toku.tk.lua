@@ -320,6 +320,25 @@ ctest:flag("--show-logs", "Show server access/error logs during tests (web proje
 
 local args = parser:parse()
 
+local function capability (m, name, msg)
+  if not m[name] then
+    error(msg)
+  end
+  return m[name]
+end
+
+local function reject_flags (m, want, flags)
+  local kind = m.config and m.config.type
+  if kind == want then
+    return
+  end
+  for i = 1, #flags do
+    if args[(str.gsub(flags[i], "%-", "_"))] then
+      parser:error("--" .. flags[i] .. " is only supported by " .. want .. " projects")
+    end
+  end
+end
+
 local function template_file (conf, input, output, write_deps, config)
   local deps = {}
   conf.env = conf.env or {}
@@ -422,6 +441,10 @@ elseif args.command == "test" then
     runtests(args.files, args)
   else
 
+    if args.interp then
+      parser:error("-i --interp only applies when test files are given as arguments")
+    end
+
     local m = project.init({
       dir = args.dir,
       env = args.env,
@@ -429,7 +452,7 @@ elseif args.command == "test" then
       lua_path_extra = args.lua_path_extra,
       lua_cpath_extra = args.lua_cpath_extra,
       config = args.config,
-      iterate = args.iterate,
+      stop = args.stop,
       skip_check = args.skip_check,
       wasm = args.wasm,
       profile = args.profile,
@@ -443,6 +466,8 @@ elseif args.command == "test" then
       test_server = args.server,
       show_logs = args.show_logs,
     })
+    reject_flags(m, "web", { "root", "client", "server", "show-logs", "openresty-dir" })
+    reject_flags(m, "lib", { "wasm" })
     if args.iterate then
       m.iterate()
     else
@@ -487,7 +512,7 @@ elseif args.command == "install" then
     verbosity = args.verbosity,
   })
 
-  m.install({
+  capability(m, "install", "install is not available for web projects (use toku build)")({
     bundled = args.bundled,
     prefix = args.prefix,
     bundle_cc = args.bundle_cc,
@@ -507,11 +532,8 @@ elseif args.command == "release" then
     verbosity = args.verbosity,
   })
 
-  if m.release then
-    m.release()
-  else
-    io.stderr:write("Release not available (public != true in make.lua)\n")
-  end
+  capability(m, "release",
+    "release is not available (requires a non-wasm lib project with public = true in make.lua)")()
 
 elseif args.command == "pack" then
 
@@ -523,11 +545,7 @@ elseif args.command == "pack" then
     verbosity = args.verbosity,
   })
 
-  if m.pack then
-    m.pack()
-  else
-    io.stderr:write("Pack not available for this project type\n")
-  end
+  capability(m, "pack", "pack is not available (requires a non-wasm lib project)")()
 
 elseif args.command == "exec" then
 
@@ -538,7 +556,7 @@ elseif args.command == "exec" then
     verbosity = args.verbosity,
   })
 
-  m.exec(args.args)
+  capability(m, "exec", "exec is not available (requires a non-wasm lib project)")(args.args)
 
 elseif args.command == "build" then
 
@@ -550,7 +568,9 @@ elseif args.command == "build" then
     verbosity = args.verbosity,
   })
 
-  m.build({ test = args.test })
+  reject_flags(m, "web", { "openresty-dir" })
+
+  capability(m, "build", "build is only available for web projects (use toku install)")({ test = args.test })
 
 elseif args.command == "start" then
 
@@ -562,7 +582,7 @@ elseif args.command == "start" then
     verbosity = args.verbosity,
   })
 
-  m.start({ test = args.test, fg = args.fg })
+  capability(m, "start", "start is only available for web projects")({ test = args.test, fg = args.fg })
 
 elseif args.command == "stop" then
 
@@ -574,7 +594,7 @@ elseif args.command == "stop" then
     verbosity = args.verbosity,
   })
 
-  m.stop()
+  capability(m, "stop", "stop is only available for web projects")()
 
 elseif args.command == "clean" then
 
@@ -583,6 +603,8 @@ elseif args.command == "clean" then
     config = args.config,
     verbosity = args.verbosity,
   })
+
+  reject_flags(m, "web", { "wasm", "client", "server" })
 
   local removed = m.clean({
     all = args.all,
@@ -612,11 +634,11 @@ elseif args.command == "lua" then
   local cmd = { args.lua or env.interpreter()[1] }
 
   if args.profile then
-    arr.push(cmd, "-l", "santoku.profiler")
+    arr.push(cmd, "-l", "santoku.profile")
   end
 
   if args.trace then
-    arr.push(cmd, "-l", "santoku.tracer")
+    arr.push(cmd, "-l", "santoku.trace")
   end
 
   if args.serialize then
