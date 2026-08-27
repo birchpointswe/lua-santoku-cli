@@ -438,7 +438,9 @@ elseif args.command == "test" then
       end
       args.interp = interp
     end
-    runtests(args.files, args)
+    if not runtests(args.files, args) then
+      os.exit(1)
+    end
   else
 
     if args.interp then
