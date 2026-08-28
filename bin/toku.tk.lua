@@ -37,6 +37,13 @@ local parser = argparse()
   :epilog("<% return name %> <% return version %>")
 
 parser
+  :flag("-v --version", "Show version and exit")
+  :action(function ()
+    print("<% return name %> <% return version %>")
+    os.exit(0)
+  end)
+
+parser
   :command_target("command")
   :option("--verbosity", "Verbosity", nil, tonumber, 1, "0-1")
 
