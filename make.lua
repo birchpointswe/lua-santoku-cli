@@ -12,7 +12,7 @@ local env = {
     "santoku-bundle >= 2.0.0, < 3.0.0",
     "santoku-system >= 2.0.0, < 3.0.0",
     "santoku-test-runner >= 2.0.3, < 3.0.0",
-    "santoku-make >= 4.0.0, < 5.0.0",
+    "santoku-make >= 5.0.0, < 6.0.0",
     "argparse >= 0.7.1-1",
   },
 }
