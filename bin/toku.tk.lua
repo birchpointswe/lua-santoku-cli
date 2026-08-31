@@ -518,6 +518,7 @@ elseif args.command == "install" then
     config = args.config,
     luarocks_config = args.luarocks_config,
     skip_tests = args.skip_tests,
+    wasm = args.wasm,
     verbosity = args.verbosity,
   })
 
