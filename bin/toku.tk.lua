@@ -7,6 +7,7 @@ local runtests = require("santoku.test.runner")
 local env = require("santoku.env")
 local sys = require("santoku.system")
 local arr = require("santoku.array")
+local tksetup = require("santoku.cli.setup")
 local inherit = require("santoku.inherit")
 local pushindex = inherit.pushindex
 
@@ -325,7 +326,28 @@ ctest:flag("--client", "Run client tests only (web projects)")
 ctest:flag("--server", "Run server tests only (web projects)")
 ctest:flag("--show-logs", "Show server access/error logs during tests (web projects)")
 
+local csetup = parser
+  :command("setup", "Provision the toku-managed lua 5.1 toolchain")
+
+csetup:mutex(
+  csetup:flag("--uninstall", "Remove the managed toolchain tree"),
+  csetup:flag("--upgrade", "Rebuild lua and luarocks at the pinned versions, keeping installed rocks"),
+  csetup:flag("--repair --force", "Rebuild a broken or half-built toolchain, keeping installed rocks"),
+  csetup:flag("--path", "Print the managed bin directories for PATH wiring"))
+
+parser
+  :command("doctor", "Diagnose the managed toolchain and PATH wiring")
+
+local cluarocks = parser
+  :command("luarocks", "Run the managed luarocks")
+
+cluarocks:handle_options(false)
+cluarocks:argument("args", "Arguments passed through to luarocks"):args("*")
+
 local args = parser:parse()
+
+local shell_path = sys.getenv("PATH")
+tksetup.activate()
 
 local function capability (m, name, msg)
   if not m[name] then
@@ -639,9 +661,53 @@ elseif args.command == "clean" then
     io.stdout:write("  (nothing to clean)\n")
   end
 
+elseif args.command == "setup" then
+
+  if args.uninstall then
+    tksetup.uninstall()
+  elseif args.path then
+    print(tksetup.path_string())
+  else
+    tksetup.run({
+      upgrade = args.upgrade,
+      repair = args.repair,
+      version = "<% return version %>",
+    })
+  end
+
+elseif args.command == "doctor" then
+
+  if tksetup.doctor({
+    path = shell_path,
+    argv0 = arg and arg[0] or nil,
+  }) > 0 then
+    os.exit(1)
+  end
+
+elseif args.command == "luarocks" then
+
+  local p = tksetup.paths()
+  if not fs.isfile(p.luarocks_exe) then
+    error("managed luarocks not found, run: toku setup")
+  end
+  sys.execute(arr.push({ p.luarocks_exe }, arr.spread(args.args)))
+
 elseif args.command == "lua" then
 
-  local cmd = { args.lua or env.interpreter()[1] }
+  local p = tksetup.paths()
+  local cmd
+  if args.lua then
+    cmd = { args.lua }
+  elseif fs.isfile(p.lua_exe) then
+    cmd = { p.lua_exe, env = {
+      LUA_PATH = tksetup.lua_path(p) .. ";" .. (sys.getenv("LUA_PATH") or ";;"),
+      LUA_CPATH = tksetup.lua_cpath(p) .. ";" .. (sys.getenv("LUA_CPATH") or ";;"),
+    } }
+  else
+    cmd = { env.interpreter()[1] }
+    io.stderr:write("toku: no managed lua toolchain, falling back to " ..
+      cmd[1] .. " (run toku setup)\n")
+  end
 
   if args.profile then
     arr.push(cmd, "-l", "santoku.profile")
