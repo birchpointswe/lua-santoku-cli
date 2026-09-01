@@ -41,6 +41,7 @@ test("setup", function ()
     assert(eq("/scratch/data/toku/rocks/bin/toku", p.toku_exe))
     assert(eq("/scratch/data/toku/luarocks/etc/luarocks/config-5.1.lua", p.luarocks_cfg))
     assert(eq("/scratch/data/toku/src", p.src))
+    assert(eq("/scratch/data/toku/setup-toku.sh", p.script))
   end)
 
   test("paths default to ~/.local/share when XDG_DATA_HOME is unset", function ()
@@ -84,13 +85,51 @@ test("setup", function ()
     assert(eq(false, ok))
   end)
 
-  test("bootstrap.sh pins match the module pins", function ()
-    local script = fs.readfile("res/bootstrap.sh")
-    for _, spec in pairs(setup.pins) do
-      assert(string.find(script, spec.version, 1, true) ~= nil)
-      assert(string.find(script, spec.url, 1, true) ~= nil)
-      assert(string.find(script, spec.sha256, 1, true) ~= nil)
+  test("run errors without a stored setup-toku.sh", function ()
+    local ok, e, hint = pcall(setup.run, { root = "/nonexistent/scratch/toku" })
+    assert(eq(false, ok))
+    assert(string.find(tostring(e), "provisioning script", 1, true) ~= nil)
+    assert(string.find(tostring(hint), "santoku.dev/setup-toku.sh", 1, true) ~= nil)
+  end)
+
+  test("delegation", function ()
+
+    local dir = fs.join(var("HOME"), "tmp", "toku-setup-delegate-spec")
+    local root = fs.join(dir, "toku")
+
+    local function stored (body)
+      sys.execute({ "rm", "-rf", "--", dir })
+      fs.mkdirp(root)
+      local fp = fs.join(root, "setup-toku.sh")
+      fs.writefile(fp, body)
+      sys.execute({ "chmod", "+x", fp })
+      return fp
     end
+
+    test("run refuses a stored script with drifted pins", function ()
+      stored("#!/bin/sh\nLUA_VERSION=9.9.9\nLUAROCKS_VERSION=8.8.8\nexit 1\n")
+      local ok, e = pcall(setup.run, { root = root })
+      assert(eq(false, ok))
+      assert(string.find(tostring(e), "9.9.9", 1, true) ~= nil)
+      assert(string.find(tostring(e), setup.pins.lua.version, 1, true) ~= nil)
+    end)
+
+    test("run execs the stored script with --root, adding --rebuild for repair and upgrade", function ()
+      local log = fs.join(root, "args.log")
+      stored("#!/bin/sh\n" ..
+        "LUA_VERSION=" .. setup.pins.lua.version .. "\n" ..
+        "LUAROCKS_VERSION=" .. setup.pins.luarocks.version .. "\n" ..
+        "printf '%s\\n' \"$@\" > " .. log .. "\n")
+      setup.run({ root = root })
+      assert(eq("--root\n" .. root .. "\n", fs.readfile(log)))
+      setup.run({ root = root, repair = true })
+      assert(eq("--root\n" .. root .. "\n--rebuild\n", fs.readfile(log)))
+      setup.run({ root = root, upgrade = true })
+      assert(eq("--root\n" .. root .. "\n--rebuild\n", fs.readfile(log)))
+    end)
+
+    sys.execute({ "rm", "-rf", "--", dir })
+
   end)
 
   test("use-system", function ()
@@ -201,34 +240,5 @@ test("setup", function ()
     sys.execute({ "rm", "-rf", "--", dir })
 
   end)
-
-  if os.getenv("TK_CLI_TEST_SETUP") == "1" then
-
-    test("provisions, doctors, and uninstalls a scratch tree", function ()
-      local root = fs.join(var("HOME"), "tmp", "toku-setup-spec", "toku")
-      sys.execute({ "rm", "-rf", "--", fs.dirname(root) })
-      setup.run({ root = root, version = "spec" })
-      assert(eq(true, fs.isfile(fs.join(root, "lua", "bin", "lua"))))
-      assert(eq(true, fs.isfile(fs.join(root, "lua", "bin", "luac"))))
-      assert(eq(true, fs.isfile(fs.join(root, "luarocks", "bin", "luarocks"))))
-      assert(eq(true, fs.isfile(fs.join(root, "rocks", "bin", "toku"))))
-      local m = fs.runfile(fs.join(root, "manifest.lua"))
-      assert(eq("managed", m.mode))
-      assert(eq(setup.pins.lua.version, m.lua))
-      assert(eq(setup.pins.luarocks.version, m.luarocks))
-      assert(eq("spec", m.cli))
-      local r = setup.ensure({ root = root })
-      assert(eq("managed", r.mode))
-      assert(eq(fs.join(root, "lua", "bin", "luac"), setup.ensure_luac(r)))
-      assert(eq(0, setup.doctor({ root = root })))
-      setup.run({ root = root, version = "spec" })
-      setup.uninstall({ root = root })
-      assert(eq(false, fs.exists(root)))
-      sys.execute({ "rm", "-rf", "--", fs.dirname(root) })
-    end)
-
-  else
-    print("Skipping setup provisioning test (set TK_CLI_TEST_SETUP=1 to enable)")
-  end
 
 end)

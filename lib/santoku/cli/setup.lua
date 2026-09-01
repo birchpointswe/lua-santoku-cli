@@ -20,20 +20,15 @@ local tsort = table.sort
 local getenv = os.getenv
 
 local pins = {
-  lua = {
-    version = "5.1.5",
-    url = "https://www.lua.org/ftp/lua-5.1.5.tar.gz",
-    sha256 = "2640fc56a795f29d28ef15e13c34a47e223960b0240e8cb0a82d9b0738695333",
-  },
-  luarocks = {
-    version = "3.13.0",
-    url = "https://luarocks.github.io/luarocks/releases/luarocks-3.13.0.tar.gz",
-    sha256 = "245bf6ec560c042cb8948e3d661189292587c5949104677f1eecddc54dbe7e37",
-  },
+  lua = { version = "5.1.5" },
+  luarocks = { version = "3.13.0" },
 }
 
+local script_url = "https://santoku.dev/setup-toku.sh"
+
 local not_set_up =
-  "toku is not set up, run: toku setup (managed lua 5.1 toolchain) or toku setup --use-system"
+  "toku is not set up: download " .. script_url ..
+  ", read it, then run it (managed lua 5.1 toolchain), or run: toku setup --use-system"
 
 local function data_home ()
   local xdg = getenv("XDG_DATA_HOME")
@@ -59,6 +54,7 @@ local function paths (root)
   p.toku_exe = fs.join(p.rocks_bin, "toku")
   p.luarocks_cfg = fs.join(p.luarocks, "etc", "luarocks", "config-5.1.lua")
   p.manifest = fs.join(root, "manifest.lua")
+  p.script = fs.join(root, "setup-toku.sh")
   return p
 end
 
@@ -101,81 +97,12 @@ local function firstline (cmd)
   return first
 end
 
-local function sha256 (fp)
-  local cmd
-  if which("sha256sum") then
-    cmd = { "sha256sum", "--", fp }
-  elseif which("shasum") then
-    cmd = { "shasum", "-a", "256", "--", fp }
-  elseif which("openssl") then
-    cmd = { "openssl", "dgst", "-sha256", "-r", fp }
-  else
-    return error("no sha256 tool found (need sha256sum, shasum, or openssl)")
-  end
-  local first = firstline(cmd)
-  return first and (smatch(first, "^(%x+)")) or nil
-end
-
-local function download (url, dest)
-  local part = dest .. ".part"
-  fs.mkdirp(fs.dirname(dest))
-  if fs.exists(part) then
-    fs.rm(part)
-  end
-  local cmd
-  if which("curl") then
-    cmd = { "curl", "-fSL", "-o", part, url }
-  elseif which("wget") then
-    cmd = { "wget", "-q", "-O", part, "--", url }
-  else
-    return error("no downloader found (need curl or wget)")
-  end
-  return (function (ok, ...)
-    if not ok then
-      if fs.exists(part) then
-        fs.rm(part)
-      end
-      return false, ...
-    end
-    fs.mv(part, dest)
-    return true
-  end)(pcall(sys.execute, cmd))
-end
-
-local function fetch (spec, dest)
-  if fs.exists(dest) then
-    if sha256(dest) == spec.sha256 then
-      return dest
-    end
-    printf("[setup]\tdiscarding unverified %s\n", dest)
-    fs.rm(dest)
-  end
-  printf("[setup]\tfetching %s\n", spec.url)
-  if not download(spec.url, dest) then
-    return error("unable to fetch", dest, spec.url)
-  end
-  local got = sha256(dest)
-  if got ~= spec.sha256 then
-    fs.rm(dest)
-    return error("download failed sha256 verification", dest, spec.sha256, got)
-  end
-  printf("[setup]\tok %s\n", dest)
-  return dest
-end
-
 local function platform ()
   local ok, out = pcall(firstline, { "uname", "-s" })
   if ok and out and out ~= "" then
     return out
   end
   return "Linux"
-end
-
-local function rmtree (p, fp)
-  assert(startswith(fp, p.root), "refusing to remove path outside managed root", fp)
-  if fs.exists(fp) then
-    sys.execute({ "rm", "-rf", "--", fp })
-  end
 end
 
 local function missing_tools ()
@@ -194,120 +121,14 @@ local function missing_tools ()
   return missing
 end
 
-local function extract (p, name)
-  local tarball = fs.join(p.src, name .. ".tar.gz")
-  local dir = fs.join(p.src, name)
-  rmtree(p, dir)
-  sys.execute({ "tar", "-xzf", tarball, "-C", p.src })
-  assert(fs.isdir(dir), "extraction did not produce", dir)
-  return dir
-end
-
-local function patch_file (fp, subs)
-  if not fs.isfile(fp) then
-    return
+local function script_pins (fp)
+  local ok, src = pcall(fs.readfile, fp)
+  if not ok or type(src) ~= "string" then
+    return nil, nil
   end
-  local src = fs.readfile(fp)
-  local out = src
-  for i = 1, #subs do
-    local old, new = subs[i][1], subs[i][2]
-    if sfind(out, old, 1, true) then
-      out = out:gsub(old:gsub("%p", "%%%0"), new:gsub("%%", "%%%%"), 1)
-    end
-  end
-  if out ~= src then
-    fs.writefile(fp, out)
-  end
-end
-
-local function patch_lua (dir)
-  patch_file(fs.join(dir, "src", "luaconf.h"), {
-    { "#define LUA_TMPNAMBUFSIZE\t32", "#define LUA_TMPNAMBUFSIZE\t256" },
-    { "\tstrcpy(b, \"/tmp/lua_XXXXXX\"); \\",
-      "\t{ const char *tk_td = getenv(\"TMPDIR\"); \\\n" ..
-      "\t  if (tk_td == NULL || *tk_td == '\\0') tk_td = \"/tmp\"; \\\n" ..
-      "\t  if (strlen(tk_td) + 12 > LUA_TMPNAMBUFSIZE) tk_td = \"/tmp\"; \\\n" ..
-      "\t  strcpy(b, tk_td); strcat(b, \"/lua_XXXXXX\"); } \\" },
-  })
-end
-
-local function build_lua (p)
-  local spec = pins.lua
-  local name = "lua-" .. spec.version
-  fetch(spec, fs.join(p.src, name .. ".tar.gz"))
-  local dir = extract(p, name)
-  local plat = platform()
-  printf("[setup]\tbuilding %s (%s)\n", name, plat)
-  patch_lua(dir)
-  fs.pushd(dir, function ()
-    if plat == "Darwin" then
-      sys.execute({ "make", "macosx" })
-    elseif plat == "Linux" then
-      sys.execute({ "make", "-C", "src", "all", "CC=cc",
-        "MYCFLAGS=-DLUA_USE_POSIX -DLUA_USE_DLOPEN",
-        "MYLIBS=-Wl,-E -ldl" })
-    else
-      sys.execute({ "make", "-C", "src", "all", "CC=cc",
-        "MYCFLAGS=-DLUA_USE_POSIX -DLUA_USE_DLOPEN",
-        "MYLIBS=-Wl,-E" })
-    end
-    sys.execute({ "make", "install", "INSTALL_TOP=" .. p.lua })
-  end)
-  assert(fs.isfile(p.lua_exe), "lua build did not produce", p.lua_exe)
-end
-
-local function ensure_tree_config (p)
-  assert(fs.isfile(p.luarocks_cfg), "luarocks config not found", p.luarocks_cfg)
-  local cfg = fs.readfile(p.luarocks_cfg)
-  if sfind(cfg, "name = \"toku\"", 1, true) then
-    return
-  end
-  fs.writefile(p.luarocks_cfg, cfg ..
-    format("\nrocks_trees = {\n  { name = %q, root = %q },\n}\n", "toku", p.rocks))
-end
-
-local function patch_luarocks (dir)
-  patch_file(fs.join(dir, "src", "luarocks", "core", "sysdetect.lua"), {
-    { "local libname = fd:read(64):gsub(\"%z.*\", \"\")",
-      "local libname = (fd:read(64) or \"\"):gsub(\"%z.*\", \"\")" },
-  })
-  patch_file(fs.join(dir, "src", "luarocks", "fs", "unix", "tools.lua"), {
-    { "fs.execute(vars.LN .. force_flag, tempfile, lockfile)",
-      "fs.execute(vars.LN .. \" -s\" .. force_flag, tempfile, lockfile)" },
-  })
-end
-
-local function build_luarocks (p)
-  local spec = pins.luarocks
-  local name = "luarocks-" .. spec.version
-  fetch(spec, fs.join(p.src, name .. ".tar.gz"))
-  local dir = extract(p, name)
-  printf("[setup]\tbuilding %s\n", name)
-  patch_luarocks(dir)
-  fs.pushd(dir, function ()
-    sys.execute({ "sh", "./configure",
-      "--prefix=" .. p.luarocks,
-      "--with-lua=" .. p.lua,
-      "--rocks-tree=" .. p.rocks })
-    sys.execute({ "make", "-f", "GNUmakefile", "all" })
-    sys.execute({ "make", "-f", "GNUmakefile", "install" })
-  end)
-  assert(fs.isfile(p.luarocks_exe), "luarocks build did not produce", p.luarocks_exe)
-  ensure_tree_config(p)
-end
-
-local function install_cli (p)
-  printf("[setup]\tinstalling santoku-cli into %s\n", p.rocks)
-  fs.pushd(p.root, function ()
-    sys.execute({
-      p.luarocks_exe, "install", "santoku-cli",
-      env = {
-        PATH = path_string(p) .. ":" .. (getenv("PATH") or ""),
-        LUAROCKS_CONFIG = p.luarocks_cfg,
-      },
-    })
-  end)
-  assert(fs.isfile(p.toku_exe), "santoku-cli install did not produce", p.toku_exe)
+  local lv = smatch(src, "^LUA_VERSION=(%S+)") or smatch(src, "\nLUA_VERSION=(%S+)")
+  local rv = smatch(src, "^LUAROCKS_VERSION=(%S+)") or smatch(src, "\nLUAROCKS_VERSION=(%S+)")
+  return lv, rv
 end
 
 local function write_manifest (p, t)
@@ -380,7 +201,7 @@ local function ensure_luac (r)
   if not m.luac_exe then
     return error("no lua 5.1 luac recorded (luajit systems often have none)",
       "install a lua 5.1 luac and re-run: toku setup --use-system, " ..
-      "or run: toku setup for a managed pair")
+      "or provision the managed toolchain with " .. script_url)
   end
   if not exists_file(m.luac_exe) then
     return error("recorded system luac no longer exists, run: toku setup --use-system",
@@ -438,7 +259,8 @@ local function detect_lua (exe)
   end
   if ver ~= "Lua 5.1" then
     return error("interpreter is not lua 5.1 compatible: " .. ver, exe,
-      "santoku requires lua 5.1 (or a 5.1-compatible luajit), run: toku setup for a managed 5.1")
+      "santoku requires lua 5.1 (or a 5.1-compatible luajit), " ..
+      "provision a managed 5.1 with " .. script_url)
   end
   return ver, jitv
 end
@@ -478,7 +300,7 @@ local function detect_luarocks (exe)
   if target ~= "5.1" then
     return error("luarocks targets lua " .. target .. ", not 5.1", exe,
       "santoku rocks pin lua == 5.1 and cannot install with this luarocks, " ..
-      "run: toku setup for a managed pair")
+      "provision a managed pair with " .. script_url)
   end
   return version, target
 end
@@ -487,47 +309,24 @@ local function run (opts)
   opts = opts or {}
   local p = paths(opts.root)
   assert(not smatch(p.root, "%s"), "managed root contains whitespace", p.root)
-  local m = read_manifest(p)
-  local rebuild = opts.upgrade or opts.repair
-  if rebuild then
-    printf("[setup]\trebuilding toolchain, keeping %s\n", p.rocks)
-    rmtree(p, p.lua)
-    rmtree(p, p.luarocks)
-    rmtree(p, p.src)
-    fs.rm(p.manifest, true)
-  elseif m and m.mode == "managed" and
-    (m.lua ~= pins.lua.version or m.luarocks ~= pins.luarocks.version) then
-    return error(
-      "managed tree was built from different pinned versions, run: toku setup --upgrade",
-      m.lua, m.luarocks)
+  if not exists_file(p.script) then
+    return error("no provisioning script at " .. p.script,
+      "download " .. script_url .. ", read it, then run it")
   end
-  local missing = missing_tools()
-  if #missing > 0 then
-    return error("missing required tools: " .. tconcat(missing, ", "))
+  local lv, rv = script_pins(p.script)
+  if lv ~= pins.lua.version or rv ~= pins.luarocks.version then
+    return error(format(
+      "stored setup-toku.sh provisions lua %s and luarocks %s, " ..
+      "but this santoku-cli pins lua %s and luarocks %s",
+      lv or "?", rv or "?", pins.lua.version, pins.luarocks.version),
+      "download the current " .. script_url .. ", read it, then run it")
   end
-  fs.mkdirp(p.src)
-  if not fs.isfile(p.lua_exe) then
-    build_lua(p)
+  local cmd = { "sh", p.script, "--root", p.root }
+  if opts.upgrade or opts.repair then
+    cmd[#cmd + 1] = "--rebuild"
   end
-  if not fs.isfile(p.luarocks_exe) then
-    build_luarocks(p)
-  end
-  ensure_tree_config(p)
-  if rebuild or not fs.isfile(p.toku_exe) then
-    install_cli(p)
-  end
-  write_manifest(p, {
-    mode = "managed",
-    lua = pins.lua.version,
-    luarocks = pins.luarocks.version,
-    cli = opts.version or "unknown",
-    platform = platform(),
-    created = os.date("!%Y-%m-%dT%H:%M:%SZ"),
-  })
-  printf("[setup]\tmanaged toolchain ready at %s\n", p.root)
-  printf("[setup]\tmanaged toku: %s\n", p.toku_exe)
-  printf("[setup]\toptional PATH wiring:\n")
-  printf("[setup]\t  export PATH=\"%s:$PATH\"\n", path_string(p))
+  printf("[setup]\tdelegating to %s\n", p.script)
+  sys.execute(cmd)
 end
 
 local function use_system (opts)
@@ -537,7 +336,7 @@ local function use_system (opts)
     which("luajit", opts.path)
   if not lua_exe then
     return error("no lua interpreter found on PATH (tried lua, lua5.1, luajit)",
-      "install lua 5.1 or run: toku setup for a managed 5.1")
+      "install lua 5.1 or provision a managed 5.1 with " .. script_url)
   end
   lua_exe = fs.absolute(lua_exe)
   local ver, jitv = detect_lua(lua_exe)
@@ -545,7 +344,7 @@ local function use_system (opts)
     which("luarocks-5.1", opts.path)
   if not luarocks_exe then
     return error("no luarocks found on PATH (tried luarocks, luarocks-5.1)",
-      "install a luarocks targeting lua 5.1 or run: toku setup for a managed pair")
+      "install a luarocks targeting lua 5.1 or provision a managed pair with " .. script_url)
   end
   luarocks_exe = fs.absolute(luarocks_exe)
   local lr_version, lr_target = detect_luarocks(luarocks_exe)
@@ -617,6 +416,21 @@ local function doctor_managed (p, m, shellpath, prob)
     m.lua or "?", m.luarocks or "?", m.cli or "?", m.created or "?", m.platform or "?")
   if m.lua ~= pins.lua.version or m.luarocks ~= pins.luarocks.version then
     prob("manifest versions differ from pinned versions, run: toku setup --upgrade")
+  end
+  if exists_file(p.script) then
+    local lv, rv = script_pins(p.script)
+    if lv == pins.lua.version and rv == pins.luarocks.version then
+      printf("  stored setup-toku.sh: %s (pins match)\n", p.script)
+    else
+      printf("  stored setup-toku.sh: %s (pins lua %s, luarocks %s)\n",
+        p.script, lv or "?", rv or "?")
+      prob("stored setup-toku.sh pins differ from this santoku-cli's, " ..
+        "download the current " .. script_url .. ", read it, then run it")
+    end
+  else
+    printf("  stored setup-toku.sh: missing\n")
+    prob("managed tree carries no setup-toku.sh, so --repair and --upgrade cannot run, " ..
+      "download " .. script_url .. ", read it, then run it")
   end
   if exists_file(p.lua_exe) then
     local v = probe_lua(p.lua_exe)
@@ -704,7 +518,8 @@ local function doctor_system (p, m, shellpath, prob)
     elseif v ~= m.lua_version then
       printf("  lua on disk: reports %s (recorded %s)\n", v, m.lua_version or "?")
       prob("system lua drifted from the recorded version, " ..
-        "run: toku setup --use-system to re-verify or toku setup for a managed 5.1")
+        "run: toku setup --use-system to re-verify, " ..
+        "or provision a managed 5.1 with " .. script_url)
     else
       printf("  lua on disk: matches (%s)\n", v)
     end
@@ -723,7 +538,7 @@ local function doctor_system (p, m, shellpath, prob)
     elseif target ~= "5.1" then
       printf("  luarocks on disk: %s, targets lua %s\n", v, target or "unknown")
       prob("system luarocks now targets lua " .. (target or "unknown") ..
-        ", santoku requires 5.1, run: toku setup for a managed pair")
+        ", santoku requires 5.1, provision a managed pair with " .. script_url)
     elseif v ~= m.luarocks_version then
       printf("  luarocks on disk: %s targeting lua 5.1 (recorded %s)\n",
         v, m.luarocks_version or "?")
@@ -798,7 +613,8 @@ local function doctor (opts)
     doctor_system(p, m, shellpath, prob)
   elseif m then
     printf("  mode: unknown (stale manifest)\n")
-    prob("manifest has no valid mode, run: toku setup or toku setup --use-system")
+    prob("manifest has no valid mode, provision with " .. script_url ..
+      " or run: toku setup --use-system")
   elseif fs.isdir(p.root) then
     printf("  mode: not set up (root exists without a manifest)\n")
     prob("root exists without a manifest (half-built tree), run: toku setup --repair")
@@ -826,6 +642,7 @@ end
 
 return {
   pins = pins,
+  script_url = script_url,
   paths = paths,
   path_string = path_string,
   lua_path = lua_path,

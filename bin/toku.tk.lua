@@ -326,12 +326,15 @@ ctest:flag("--server", "Run server tests only (web projects)")
 ctest:flag("--show-logs", "Show server access/error logs during tests (web projects)")
 
 local csetup = parser
-  :command("setup", "Provision the toku-managed lua 5.1 toolchain")
+  :command("setup",
+    "Maintain the toku-managed lua 5.1 toolchain (provisioned by setup-toku.sh from santoku.dev)")
 
 csetup:mutex(
   csetup:flag("--uninstall", "Remove the managed toolchain tree"),
-  csetup:flag("--upgrade", "Rebuild lua and luarocks at the pinned versions, keeping installed rocks"),
-  csetup:flag("--repair --force", "Rebuild a broken or half-built toolchain, keeping installed rocks"),
+  csetup:flag("--upgrade",
+    "Rebuild lua and luarocks at the pinned versions via the stored setup-toku.sh, keeping installed rocks"),
+  csetup:flag("--repair --force",
+    "Rebuild a broken or half-built toolchain via the stored setup-toku.sh, keeping installed rocks"),
   csetup:flag("--use-system", "Verify and record the system lua and luarocks instead of provisioning"),
   csetup:flag("--path", "Print the managed bin directories for PATH wiring"))
 
@@ -707,7 +710,6 @@ elseif args.command == "setup" then
     tksetup.run({
       upgrade = args.upgrade,
       repair = args.repair,
-      version = "<% return version %>",
     })
   end
 

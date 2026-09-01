@@ -10,36 +10,26 @@ apps, and it exposes the templating, bundling, and interpreter utilities standal
 
 ## Install
 
-With a luarocks that targets lua 5.1 (or a 5.1-compatible luajit):
-
-```sh
-luarocks install santoku-cli
-toku setup --use-system
-```
-
-Santoku rocks pin `lua == 5.1`, so on distros whose luarocks targets a newer
-lua (Arch, Fedora, current Homebrew) the install above fails. Use the
-bootstrap script instead. It builds a private lua 5.1 and luarocks from
-sha256-pinned sources into `~/.local/share/toku` (respecting
-`XDG_DATA_HOME`) and installs santoku-cli there, touching nothing else on
-your system:
-
-```sh
-git clone https://github.com/birchpointswe/lua-santoku-cli
-sh lua-santoku-cli/res/bootstrap.sh
-~/.local/share/toku/rocks/bin/toku doctor
-```
-
-Prerequisites: `cc`, `make`, `tar`, `unzip`, `curl` or `wget`, and a sha256
-tool (`sha256sum`, `shasum`, or `openssl`).
+Install instructions live at [santoku.dev](https://santoku.dev/#install).
+The sanctioned path is `setup-toku.sh`, served by the site: download it,
+read it, then run it. It builds a pinned lua 5.1 and luarocks from
+sha256-verified sources into `~/.local/share/toku` (honouring
+`XDG_DATA_HOME`), installs santoku-cli there, and writes nothing else.
 
 ## Setup
 
-toku requires a one-time `toku setup` before any command that needs lua or
+toku requires a one-time setup before any command that needs lua or
 luarocks (`toku lua`, `toku luarocks`, and the project commands that drive
-builds). Until then those commands error and name the setup commands to run.
-There are two modes, recorded in a manifest at `~/.local/share/toku` that
-toku resolves through on every run:
+builds). Until then those commands error and name the steps to run. There
+are two modes, recorded in a manifest at `~/.local/share/toku` that toku
+resolves through on every run: managed, provisioned by `setup-toku.sh`
+from [santoku.dev](https://santoku.dev/#install), and system, recorded by
+`toku setup --use-system`.
+
+`setup-toku.sh` is the only provisioner. When it provisions, it stores a
+copy of itself at `~/.local/share/toku/setup-toku.sh`, so the managed tree
+always carries the script that built it. The `toku setup` subcommand is
+maintenance around that:
 
 ```sh
 toku setup
@@ -50,8 +40,10 @@ toku setup --repair
 toku setup --uninstall
 ```
 
-- `toku setup` provisions the managed tree (or completes a partial one); it
-  is safe to re-run.
+- `toku setup` re-runs the stored `setup-toku.sh` to complete a partial
+  managed tree; it is safe to re-run. If the stored copy is missing, or
+  its pinned versions differ from this santoku-cli's, it errors and points
+  you back at https://santoku.dev/setup-toku.sh.
 - `--use-system` records the system `lua`, `luarocks`, and `luac` instead
   of provisioning. It verifies before recording: the interpreter must
   report Lua 5.1 (a 5.1-compatible luajit is accepted) and luarocks must
@@ -63,8 +55,9 @@ toku setup --uninstall
   using a mismatched luac. The resolved absolute paths and detected
   versions go into the manifest.
 - `--path` prints the managed bin directories, colon-joined.
-- `--upgrade` rebuilds lua and luarocks at the currently pinned versions and
-  reinstalls santoku-cli, keeping the installed rocks tree.
+- `--upgrade` runs the stored `setup-toku.sh` with `--rebuild`: lua and
+  luarocks are rebuilt at the pinned versions and santoku-cli is
+  reinstalled, keeping the installed rocks tree.
 - `--repair` (alias `--force`) recovers a half-built or broken managed tree
   the same way.
 - `--uninstall` removes `~/.local/share/toku` entirely, leaving the machine
@@ -130,9 +123,10 @@ The tests are the spec. For the exhaustive surface, read them:
 [`test/spec/santoku/cli/template.lua`](test/spec/santoku/cli/template.lua),
 [`test/spec/santoku/cli/setup.lua`](test/spec/santoku/cli/setup.lua).
 
-The setup provisioning test builds the full managed toolchain into a scratch
-prefix under `~/tmp` and is gated behind `TK_CLI_TEST_SETUP=1` since it
-downloads sources and takes minutes.
+The setup tests cover path resolution, system-toolchain verification, and
+the delegation from `toku setup --repair` and `--upgrade` to the stored
+`setup-toku.sh`; provisioning itself lives in that script and is exercised
+by running it.
 
 ## License
 
