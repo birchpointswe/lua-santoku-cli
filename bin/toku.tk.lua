@@ -262,7 +262,7 @@ local cstart = parser
 cstart:option("--dir", "Top-level build directory"):count("0-1")
 cstart:option("--env", "Environment and build sub-directory"):count("0-1")
 cstart:option("--config", "Config file to use"):count("0-1")
-cstart:flag("--fg", "Run in foreground (exec to openresty)")
+cstart:flag("--fg", "Run in foreground (exec to openresty), forced when TOKU_FG is set")
 cstart:flag("--test", "Start the test environment")
 cstart:option("--openresty-dir", "Openresty installation directory"):count("0-1")
 
@@ -643,7 +643,10 @@ elseif args.command == "start" then
     verbosity = args.verbosity,
   })
 
-  capability(m, "start", "start is only available for web projects")({ test = args.test, fg = args.fg })
+  local fg_env = os.getenv("TOKU_FG")
+  local fg = args.fg or (fg_env ~= nil and fg_env ~= "" and fg_env ~= "0")
+
+  capability(m, "start", "start is only available for web projects")({ test = args.test, fg = fg })
 
 elseif args.command == "stop" then
 
