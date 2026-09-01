@@ -4,7 +4,6 @@ local argparse = require("argparse")
 local bundle = require("santoku.bundle")
 local project = require("santoku.make.project")
 local runtests = require("santoku.test.runner")
-local env = require("santoku.env")
 local sys = require("santoku.system")
 local arr = require("santoku.array")
 local tksetup = require("santoku.cli.setup")
@@ -107,7 +106,7 @@ cbundle:mutex(
     :flag("--luac-off", "Disable the luac step")
     :count("0-1"),
   cbundle
-    :flag("--luac-default", "Use the default luac command (e.g. luac -s -o %output %input)")
+    :flag("--luac-default", "Use the resolved luac (as: luac -s -o %output %input)")
     :count("0-1"))
 
 cbundle
@@ -333,6 +332,7 @@ csetup:mutex(
   csetup:flag("--uninstall", "Remove the managed toolchain tree"),
   csetup:flag("--upgrade", "Rebuild lua and luarocks at the pinned versions, keeping installed rocks"),
   csetup:flag("--repair --force", "Rebuild a broken or half-built toolchain, keeping installed rocks"),
+  csetup:flag("--use-system", "Verify and record the system lua and luarocks instead of provisioning"),
   csetup:flag("--path", "Print the managed bin directories for PATH wiring"))
 
 parser
@@ -344,10 +344,39 @@ local cluarocks = parser
 cluarocks:handle_options(false)
 cluarocks:argument("args", "Arguments passed through to luarocks"):args("*")
 
+local cluac = parser
+  :command("luac", "Run the resolved luac")
+
+cluac:handle_options(false)
+cluac:argument("args", "Arguments passed through to luac"):args("*")
+
 local args = parser:parse()
 
 local shell_path = sys.getenv("PATH")
 tksetup.activate()
+
+local function needs_toolchain ()
+  local c = args.command
+  if c == "luarocks" or c == "luac" or c == "install" or c == "release" or
+    c == "pack" or c == "exec" or c == "build" or c == "start" or c == "stop" then
+    return true
+  end
+  if c == "lua" then
+    return not args.lua
+  end
+  if c == "test" then
+    return #args.files == 0
+  end
+  if c == "bundle" then
+    return args.luac_default and true or false
+  end
+  return false
+end
+
+local toolchain
+if needs_toolchain() then
+  toolchain = tksetup.ensure()
+end
 
 local function capability (m, name, msg)
   if not m[name] then
@@ -422,7 +451,7 @@ elseif args.command == "bundle" then
   elseif args.luac_off then
     luac = false
   elseif args.luac_default then
-    luac = true
+    luac = tksetup.ensure_luac(toolchain) .. " -s -o %output %input"
   end
 
   local flags = {}
@@ -667,6 +696,10 @@ elseif args.command == "setup" then
     tksetup.uninstall()
   elseif args.path then
     print(tksetup.path_string())
+  elseif args.use_system then
+    tksetup.use_system({
+      version = "<% return version %>",
+    })
   else
     tksetup.run({
       upgrade = args.upgrade,
@@ -686,27 +719,25 @@ elseif args.command == "doctor" then
 
 elseif args.command == "luarocks" then
 
-  local p = tksetup.paths()
-  if not fs.isfile(p.luarocks_exe) then
-    error("managed luarocks not found, run: toku setup")
-  end
-  sys.execute(arr.push({ p.luarocks_exe }, arr.spread(args.args)))
+  sys.execute(arr.push({ toolchain.luarocks_exe }, arr.spread(args.args)))
+
+elseif args.command == "luac" then
+
+  sys.execute(arr.push({ tksetup.ensure_luac(toolchain) }, arr.spread(args.args)))
 
 elseif args.command == "lua" then
 
-  local p = tksetup.paths()
   local cmd
   if args.lua then
     cmd = { args.lua }
-  elseif fs.isfile(p.lua_exe) then
-    cmd = { p.lua_exe, env = {
+  elseif toolchain.mode == "managed" then
+    local p = toolchain.paths
+    cmd = { toolchain.lua_exe, env = {
       LUA_PATH = tksetup.lua_path(p) .. ";" .. (sys.getenv("LUA_PATH") or ";;"),
       LUA_CPATH = tksetup.lua_cpath(p) .. ";" .. (sys.getenv("LUA_CPATH") or ";;"),
     } }
   else
-    cmd = { env.interpreter()[1] }
-    io.stderr:write("toku: no managed lua toolchain, falling back to " ..
-      cmd[1] .. " (run toku setup)\n")
+    cmd = { toolchain.lua_exe }
   end
 
   if args.profile then

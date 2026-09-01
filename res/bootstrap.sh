@@ -117,7 +117,7 @@ say "installing santoku-cli"
   "$ROOT/luarocks/bin/luarocks" install santoku-cli)
 [ -x "$ROOT/rocks/bin/toku" ] || die "santoku-cli install did not produce $ROOT/rocks/bin/toku"
 
-printf 'return {\n  lua = "%s",\n  luarocks = "%s",\n  cli = "%s",\n  platform = "%s",\n  created = "%s",\n}\n' \
+printf 'return {\n  mode = "managed",\n  lua = "%s",\n  luarocks = "%s",\n  cli = "%s",\n  platform = "%s",\n  created = "%s",\n}\n' \
   "$LUA_VERSION" "$LUAROCKS_VERSION" "bootstrap" "$PLAT" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   > "$ROOT/manifest.lua"
 

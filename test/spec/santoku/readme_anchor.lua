@@ -34,6 +34,6 @@ test("a config file supplies the names a template can see", function ()
     toku .. " template -f - -o - -c test/res/tmpl.cfg0.lua")))
 end)
 
-test("run a lua string through the configured interpreter", function ()
-  assert(eq("2", run(toku .. " lua --string 'print(1 + 1)'")))
+test("run a lua string through an explicit interpreter", function ()
+  assert(eq("2", run(toku .. " lua --lua " .. var("LUA") .. " --string 'print(1 + 1)'")))
 end)
