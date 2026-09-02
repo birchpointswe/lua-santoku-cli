@@ -201,6 +201,7 @@ ctemplate
 local cinit = parser
   :command("init", "Initialize a new project")
 
+cinit:argument("name_positional", "Project name (same as --name)"):args("0-1")
 cinit:mutex(
   cinit:option("--name", "Project name"):count("0-1"),
   cinit:flag("--here", "Initialize in current directory, using directory name as project name"))
@@ -541,14 +542,22 @@ elseif args.command == "test" then
 elseif args.command == "init" then
 
   local name, dir
+  local positional = args.name_positional
+  if type(positional) == "table" then
+    positional = positional[1]
+  end
   if args.here then
+    if positional then
+      parser:error("--here takes no project name; it uses the directory name")
+    end
     name = basename(cwd())
     dir = "."
   else
-    if not args.name then
-      parser:error("either --name or --here must be provided")
+    name = args.name or positional
+    if not name then
+      parser:error("provide a project name: toku init <name>, or --here to use "
+        .. "the current directory's name")
     end
-    name = args.name
     dir = args.dir
   end
 
