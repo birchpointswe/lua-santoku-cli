@@ -1,6 +1,6 @@
 local env = {
   name = "santoku-cli",
-  version = "2.9.0-1",
+  version = "2.10.0-1",
   variable_prefix = "TK_CLI",
   license = "MIT",
   public = true,

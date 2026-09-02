@@ -591,6 +591,36 @@ local function doctor_system (p, m, shellpath, prob)
   end
 end
 
+local function web_parts ()
+  if not (fs.exists("make.lua") or fs.exists("make.common.lua")) then
+    return false, false
+  end
+  return fs.isdir("client"), fs.isdir("server")
+end
+
+local function missing_web_tools (client, server)
+  local missing = {}
+  if client then
+    for _, t in ipairs({ "emcc", "emmake", "node" }) do
+      if not which(t) then
+        missing[#missing + 1] = t
+      end
+    end
+  end
+  if server then
+    if not which("openresty") then
+      missing[#missing + 1] = "openresty"
+    end
+    local ord = getenv("OPENRESTY_DIR")
+    if not ord or ord == "" then
+      missing[#missing + 1] = "OPENRESTY_DIR (env var, the install prefix not the binary)"
+    elseif not fs.isdir(ord) then
+      missing[#missing + 1] = "OPENRESTY_DIR points at " .. ord .. ", which is not a directory"
+    end
+  end
+  return missing
+end
+
 local function doctor (opts)
   opts = opts or {}
   local p = paths(opts.root)
@@ -626,6 +656,20 @@ local function doctor (opts)
     printf("  build prerequisites: missing %s\n", tconcat(missing, ", "))
   else
     printf("  build prerequisites: ok\n")
+  end
+  local wclient, wserver = web_parts()
+  if wclient or wserver then
+    local half = wclient and wserver and "client and server"
+      or wclient and "client only" or "server only"
+    local wmissing = missing_web_tools(wclient, wserver)
+    if #wmissing > 0 then
+      printf("  web prerequisites (%s): missing %s\n", half, tconcat(wmissing, ", "))
+      prob("this is a web project and its toolchain is incomplete; without these the "
+        .. "build fails one tool at a time. See the web getting-started tab at "
+        .. "https://santoku.dev")
+    else
+      printf("  web prerequisites (%s): ok\n", half)
+    end
   end
   if #probs > 0 then
     printf("problems:\n")
