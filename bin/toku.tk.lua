@@ -431,6 +431,8 @@ local function template_files (conf, trim, input, mode, output, deps, config)
   end
 end
 
+local function main ()
+
 if args.command == "template" then
 
   local run_env = pushindex({}, _G)
@@ -776,4 +778,19 @@ elseif args.command == "lua" then
 
 else
   error("invalid command")
+end
+
+end
+
+if os.getenv("TOKU_TRACE") then
+  main()
+else
+  (function (ok, e)
+    if ok then
+      return
+    end
+    io.stderr:write("toku: " .. tostring(e) .. "\n")
+    io.stderr:write("  (set TOKU_TRACE=1 for the full Lua traceback)\n")
+    os.exit(1)
+  end)(err.pcall(main))
 end
