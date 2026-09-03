@@ -431,6 +431,7 @@ local function doctor (opts)
     end
   elseif not m then
     printf("%s\n", not_set_up)
+    return 1
   else
     printf("no problems found\n")
   end
