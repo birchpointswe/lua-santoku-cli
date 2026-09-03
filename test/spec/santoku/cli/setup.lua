@@ -20,14 +20,6 @@ local sys = require("santoku.system")
 
 local setup = require("santoku.cli.setup")
 
-local function fake (dir, name, body)
-  local fp = fs.join(dir, name)
-  fs.mkdirp(dir)
-  fs.writefile(fp, body)
-  sys.execute({ "chmod", "+x", fp })
-  return fp
-end
-
 test("setup", function ()
 
   test("paths respect XDG_DATA_HOME", function ()
@@ -126,115 +118,6 @@ test("setup", function ()
       assert(eq("--root\n" .. root .. "\n--rebuild\n", fs.readfile(log)))
       setup.run({ root = root, upgrade = true })
       assert(eq("--root\n" .. root .. "\n--rebuild\n", fs.readfile(log)))
-    end)
-
-    sys.execute({ "rm", "-rf", "--", dir })
-
-  end)
-
-  test("use-system", function ()
-
-    local dir = fs.join(var("HOME"), "tmp", "toku-use-system-spec")
-    local bindir = fs.join(dir, "bin")
-    local root = fs.join(dir, "toku")
-    sys.execute({ "rm", "-rf", "--", dir })
-
-    test("rejects a non-5.1 interpreter", function ()
-      local bad = fake(bindir, "lua54", "#!/bin/sh\nprintf 'Lua 5.4'\n")
-      local ok, e = pcall(setup.use_system, { root = root, lua = bad })
-      assert(eq(false, ok))
-      assert(string.find(tostring(e), "5.1", 1, true) ~= nil)
-      assert(eq(false, fs.exists(fs.join(root, "manifest.lua"))))
-    end)
-
-    test("rejects a luarocks that does not target 5.1", function ()
-      local flua = fake(bindir, "lua", "#!/bin/sh\nprintf 'Lua 5.1'\n")
-      local bad = fake(bindir, "luarocks54",
-        "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then\n" ..
-        "  printf 'fake-luarocks 3.11.1\\n'\nelse\n  printf '5.4\\n'\nfi\n")
-      local ok, e = pcall(setup.use_system, { root = root, lua = flua, luarocks = bad })
-      assert(eq(false, ok))
-      assert(string.find(tostring(e), "5.1", 1, true) ~= nil)
-      assert(eq(false, fs.exists(fs.join(root, "manifest.lua"))))
-    end)
-
-    test("rejects a luac that is not 5.1", function ()
-      local flua = fake(bindir, "lua", "#!/bin/sh\nprintf 'Lua 5.1'\n")
-      local flr = fake(bindir, "luarocks_ok",
-        "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then\n" ..
-        "  printf 'fake-luarocks 3.11.1\\n'\nelse\n  printf '5.1\\n'\nfi\n")
-      local bad = fake(bindir, "luac54",
-        "#!/bin/sh\nprintf 'Lua 5.4.8  Copyright (C) 1994-2024 Lua.org, PUC-Rio\\n'\n")
-      local ok, e = pcall(setup.use_system,
-        { root = root, lua = flua, luarocks = flr, luac = bad })
-      assert(eq(false, ok))
-      assert(string.find(tostring(e), "5.1", 1, true) ~= nil)
-      assert(eq(false, fs.exists(fs.join(root, "manifest.lua"))))
-    end)
-
-    test("records a verified system trio and resolves through it", function ()
-      local flua = fake(bindir, "lua",
-        "#!/bin/sh\nprintf 'Lua 5.1\\tLuaJIT 2.1.0-fake'\n")
-      local flr = fake(bindir, "luarocks",
-        "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then\n" ..
-        "  printf 'fake-luarocks 3.11.1\\n'\nelse\n  printf '5.1\\n'\nfi\n")
-      local fluac = fake(bindir, "luac",
-        "#!/bin/sh\nprintf 'Lua 5.1.5  Copyright (C) 1994-2012 Lua.org, PUC-Rio\\n'\n")
-      setup.use_system({ root = root, lua = flua, luarocks = flr, luac = fluac,
-        version = "spec" })
-      local m = fs.runfile(fs.join(root, "manifest.lua"))
-      assert(eq("system", m.mode))
-      assert(eq(flua, m.lua_exe))
-      assert(eq("Lua 5.1", m.lua_version))
-      assert(eq("LuaJIT 2.1.0-fake", m.lua_jit))
-      assert(eq(fluac, m.luac_exe))
-      assert(eq("5.1.5", m.luac_version))
-      assert(eq(flr, m.luarocks_exe))
-      assert(eq("3.11.1", m.luarocks_version))
-      assert(eq("5.1", m.luarocks_lua_version))
-      assert(eq("spec", m.cli))
-      local r = setup.ensure({ root = root })
-      assert(eq("system", r.mode))
-      assert(eq(flua, r.lua_exe))
-      assert(eq(flr, r.luarocks_exe))
-      assert(eq(fluac, setup.ensure_luac(r)))
-      local before = os.getenv("PATH")
-      assert(eq(nil, setup.activate(root)))
-      assert(eq(before, os.getenv("PATH")))
-      assert(eq(0, setup.doctor({
-        root = root,
-        path = bindir .. ":" .. (os.getenv("PATH") or ""),
-      })))
-    end)
-
-    test("records no luac when none matches and ensure_luac errors", function ()
-      local emptydir = fs.join(dir, "empty")
-      fs.mkdirp(emptydir)
-      setup.use_system({ root = root,
-        lua = fs.join(bindir, "lua"),
-        luarocks = fs.join(bindir, "luarocks"),
-        path = emptydir,
-        version = "spec" })
-      local m = fs.runfile(fs.join(root, "manifest.lua"))
-      assert(eq("system", m.mode))
-      assert(eq(nil, m.luac_exe))
-      assert(eq(nil, m.luac_version))
-      local r = setup.ensure({ root = root })
-      local ok, e = pcall(setup.ensure_luac, r)
-      assert(eq(false, ok))
-      assert(string.find(tostring(e), "luac", 1, true) ~= nil)
-      assert(eq(0, setup.doctor({
-        root = root,
-        path = bindir .. ":" .. (os.getenv("PATH") or ""),
-      })))
-    end)
-
-    test("doctor flags a system pair that drifted", function ()
-      fake(bindir, "lua", "#!/bin/sh\nprintf 'Lua 5.4'\n")
-      assert(setup.doctor({
-        root = root,
-        path = bindir .. ":" .. (os.getenv("PATH") or ""),
-      }) > 0)
     end)
 
     sys.execute({ "rm", "-rf", "--", dir })

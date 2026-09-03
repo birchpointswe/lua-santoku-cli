@@ -336,7 +336,6 @@ csetup:mutex(
     "Rebuild lua and luarocks at the pinned versions via the stored setup-toku.sh, keeping installed rocks"),
   csetup:flag("--repair --force",
     "Rebuild a broken or half-built toolchain via the stored setup-toku.sh, keeping installed rocks"),
-  csetup:flag("--use-system", "Verify and record the system lua and luarocks instead of provisioning"),
   csetup:flag("--path", "Print the managed bin directories for PATH wiring"))
 
 parser
@@ -713,10 +712,6 @@ elseif args.command == "setup" then
     tksetup.uninstall()
   elseif args.path then
     print(tksetup.path_string())
-  elseif args.use_system then
-    tksetup.use_system({
-      version = "<% return version %>",
-    })
   else
     tksetup.run({
       upgrade = args.upgrade,

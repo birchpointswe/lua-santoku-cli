@@ -20,11 +20,10 @@ sha256-verified sources into `~/.local/share/toku` (honouring
 
 toku requires a one-time setup before any command that needs lua or
 luarocks (`toku lua`, `toku luarocks`, and the project commands that drive
-builds). Until then those commands error and name the steps to run. There
-are two modes, recorded in a manifest at `~/.local/share/toku` that toku
-resolves through on every run: managed, provisioned by `setup-toku.sh`
-from [santoku.dev](https://santoku.dev/#install), and system, recorded by
-`toku setup --use-system`.
+builds). Until then those commands error and name the steps to run. The
+toolchain is provisioned by `setup-toku.sh` from
+[santoku.dev](https://santoku.dev/#install) and recorded in a manifest at
+`~/.local/share/toku` that toku resolves through on every run.
 
 `setup-toku.sh` is the only provisioner. When it provisions, it stores a
 copy of itself at `~/.local/share/toku/setup-toku.sh`, so the managed tree
@@ -33,7 +32,6 @@ maintenance around that:
 
 ```sh
 toku setup
-toku setup --use-system
 toku setup --path
 toku setup --upgrade
 toku setup --repair
@@ -44,16 +42,6 @@ toku setup --uninstall
   managed tree; it is safe to re-run. If the stored copy is missing, or
   its pinned versions differ from this santoku-cli's, it errors and points
   you back at https://santoku.dev/setup-toku.sh.
-- `--use-system` records the system `lua`, `luarocks`, and `luac` instead
-  of provisioning. It verifies before recording: the interpreter must
-  report Lua 5.1 (a 5.1-compatible luajit is accepted) and luarocks must
-  target lua 5.1, otherwise it fails with a precise diagnostic. For luac it
-  prefers `luac5.1` and accepts `luac` only when `-v` reports 5.1; a luajit
-  system may have no lua 5.1 luac at all (luajit uses `luajit -b`), in
-  which case none is recorded and `toku luac` and
-  `toku bundle --luac-default` error with instructions instead of silently
-  using a mismatched luac. The resolved absolute paths and detected
-  versions go into the manifest.
 - `--path` prints the managed bin directories, colon-joined.
 - `--upgrade` runs the stored `setup-toku.sh` with `--rebuild`: lua and
   luarocks are rebuilt at the pinned versions and santoku-cli is
@@ -63,12 +51,10 @@ toku setup --uninstall
 - `--uninstall` removes `~/.local/share/toku` entirely, leaving the machine
   as found.
 
-In managed mode, toku prepends the managed bin directories to `PATH` inside
-its own process, so every `lua` and `luarocks` invocation made by
-toku-driven builds uses the managed pair. In system mode there is no
-prepend; `toku lua` and `toku luarocks` use the absolute paths recorded in
-the manifest, and builds use your PATH as-is. Nothing outside the toku
-process is changed in either mode: no symlinks, no shell rc edits.
+toku prepends the managed bin directories to `PATH` inside its own
+process, so every `lua` and `luarocks` invocation made by toku-driven
+builds uses the managed pair. Nothing outside the toku process is
+changed: no symlinks, no shell rc edits.
 
 To use the managed pair from your shell as well, wire it up yourself:
 
@@ -79,23 +65,18 @@ export PATH="$(toku setup --path):$PATH"
 or symlink the binaries you want from the directories `toku setup --path`
 prints into a directory of your choosing. toku never does this for you.
 
-`toku lua` runs the resolved lua (in managed mode with the managed rocks
-tree on its package path). `toku luarocks ...` and `toku luac ...` pass
-through to the resolved luarocks and luac. `toku bundle --luac-default`
-compiles bytecode with the resolved luac rather than whatever `luac` is on
-PATH, so a system 5.4 luac can never corrupt a bundle.
+`toku lua` runs the managed lua with the managed rocks tree on its package
+path. `toku luarocks ...` and `toku luac ...` pass through to the managed
+luarocks and luac. `toku bundle --luac-default` compiles bytecode with the
+managed luac rather than whatever `luac` is on PATH, so a system 5.4 luac
+can never corrupt a bundle.
 
 ## Doctor
 
-`toku doctor` reports the mode (managed, system, or not set up) and which
-lua and luarocks are actually in effect. In managed mode it checks the
-tree's health and version drift against the pinned versions. In system mode
-it re-probes the recorded binaries and flags drift: a recorded lua or luac
-that now reports a different version (say a distro upgrade to 5.4), a
-luarocks that no longer targets 5.1, missing binaries, or a shell `PATH`
-that resolves luarocks somewhere other than the recorded path. A recorded
-absence of luac is reported but is not an error. It also reports your shell
-`PATH` wiring and build prerequisites, and exits nonzero when a problem is
+`toku doctor` reports the mode (managed or not set up) and which lua and
+luarocks are actually in effect. It checks the tree's health and version
+drift against the pinned versions. It also reports your shell `PATH`
+wiring and build prerequisites, and exits nonzero when a problem is
 found.
 
 ## Example
@@ -123,10 +104,9 @@ The tests are the spec. For the exhaustive surface, read them:
 [`test/spec/santoku/cli/template.lua`](test/spec/santoku/cli/template.lua),
 [`test/spec/santoku/cli/setup.lua`](test/spec/santoku/cli/setup.lua).
 
-The setup tests cover path resolution, system-toolchain verification, and
-the delegation from `toku setup --repair` and `--upgrade` to the stored
-`setup-toku.sh`; provisioning itself lives in that script and is exercised
-by running it.
+The setup tests cover path resolution and the delegation from
+`toku setup --repair` and `--upgrade` to the stored `setup-toku.sh`;
+provisioning itself lives in that script and is exercised by running it.
 
 ## License
 
