@@ -206,7 +206,9 @@ cinit:mutex(
   cinit:option("--name", "Project name"):count("0-1"),
   cinit:flag("--here", "Initialize in current directory, using directory name as project name"))
 cinit:option("--dir", "Project directory"):count("0-1")
-cinit:flag("--web", "Initialize a web project (default: library project)")
+cinit:mutex(
+  cinit:flag("--web", "Initialize a web project (default: library project)"),
+  cinit:flag("--api", "Initialize a server-only API project (default: library project)"))
 
 local cinstall = parser
   :command("install", "Install the project")
@@ -564,6 +566,11 @@ elseif args.command == "init" then
 
   if args.web then
     project.create_web({
+      name = name,
+      dir = dir,
+    })
+  elseif args.api then
+    project.create_api({
       name = name,
       dir = dir,
     })
