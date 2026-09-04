@@ -544,6 +544,11 @@ elseif args.command == "test" then
 
 elseif args.command == "init" then
 
+  if not (err.pcall(sys.execute, { "sh", "-c", "command -v git >/dev/null 2>&1" })) then
+    error("git is required: toku init runs git init after scaffolding, and "
+      .. "failing there would leave a half-created project. Install git first")
+  end
+
   local name, dir
   local positional = args.name_positional
   if type(positional) == "table" then
