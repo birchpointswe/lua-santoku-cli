@@ -22,7 +22,7 @@ local sh = sys.sh
 test("template", function ()
 
   test("should allow stdin/stdout processing", function ()
-    local toku = var("LUA") .. " -l luacov bin/toku.lua"
+    local toku = var("LUA") .. " bin/toku.lua"
     local cmd = "echo '<% return \"hello\" %>' | " ..
     toku .. " template -f - -o -"
     assert(eq("hello", sh({ "sh", "-c", cmd })()))
