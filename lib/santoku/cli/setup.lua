@@ -8,14 +8,14 @@ local sys = require("santoku.system")
 local env = require("santoku.env")
 
 local str = require("santoku.string")
+local arr = require("santoku.array")
 local printf = str.printf
 local format = str.format
 
-local sfind = string.find
-local smatch = string.match
-local sgmatch = string.gmatch
-local tconcat = table.concat
-local getenv = os.getenv
+local sfind = str.find
+local smatch = str.match
+local sgmatch = str.gmatch
+local tconcat = arr.concat
 
 local pins = {
   lua = { version = "5.1.5" },
@@ -29,7 +29,7 @@ local not_set_up =
   ", read it, then run it (managed lua 5.1 toolchain)"
 
 local function data_home ()
-  local xdg = getenv("XDG_DATA_HOME")
+  local xdg = env.var("XDG_DATA_HOME", nil)
   if xdg and xdg ~= "" then
     return xdg
   end
@@ -78,7 +78,7 @@ local function exists_file (fp)
 end
 
 local function which (name, path)
-  path = path or getenv("PATH") or ""
+  path = path or env.var("PATH", "")
   for dir in sgmatch(path, "[^:]+") do
     local fp = fs.join(dir, name)
     if exists_file(fp) then
@@ -240,7 +240,7 @@ local function activate (root)
   if not exists_file(p.lua_exe) or not exists_file(p.luarocks_exe) then
     return nil
   end
-  local cur = getenv("PATH") or ""
+  local cur = env.var("PATH", "")
   local out = {}
   for _, d in ipairs({ p.rocks_bin, p.luarocks_bin, p.lua_bin }) do
     if not sfind(":" .. cur .. ":", ":" .. d .. ":", 1, true) then
@@ -251,7 +251,7 @@ local function activate (root)
     out[#out + 1] = cur
     sys.setenv("PATH", tconcat(out, ":"))
   end
-  return getenv("PATH")
+  return env.var("PATH", nil)
 end
 
 local function doctor_managed (p, m, shellpath, prob)
@@ -368,7 +368,7 @@ local function missing_web_tools (client, server)
     if not which("openresty") then
       missing[#missing + 1] = "openresty"
     end
-    local ord = getenv("OPENRESTY_DIR")
+    local ord = env.var("OPENRESTY_DIR", nil)
     if not ord or ord == "" then
       missing[#missing + 1] = "OPENRESTY_DIR (env var, the install prefix not the binary)"
     elseif not fs.isdir(ord) then
@@ -381,7 +381,7 @@ end
 local function doctor (opts)
   opts = opts or {}
   local p = paths(opts.root)
-  local shellpath = opts.path or getenv("PATH") or ""
+  local shellpath = opts.path or env.var("PATH", "")
   local probs = {}
   local function prob (s)
     probs[#probs + 1] = s

@@ -5,6 +5,7 @@ local bundle = require("santoku.bundle")
 local project = require("santoku.make.project")
 local runtests = require("santoku.test.runner")
 local sys = require("santoku.system")
+local env = require("santoku.env")
 local arr = require("santoku.array")
 local tksetup = require("santoku.cli.setup")
 local inherit = require("santoku.inherit")
@@ -24,8 +25,8 @@ local writefile = fs.writefile
 local dirname = fs.dirname
 local basename = fs.basename
 local cwd = fs.cwd
-local stdin = io.stdin
-local stdout = io.stdout
+local stdin = fs.stdin
+local stdout = fs.stdout
 
 local template = require("santoku.template")
 local renderfile = template.renderfile
@@ -40,7 +41,7 @@ parser
   :flag("-v --version", "Show version and exit")
   :action(function ()
     print("<% return name %> <% return version %>")
-    os.exit(0)
+    sys.exit(0)
   end)
 
 parser
@@ -504,7 +505,7 @@ elseif args.command == "test" then
       args.interp = interp
     end
     if not runtests(args.files, args) then
-      os.exit(1)
+      sys.exit(1)
     end
   else
 
@@ -668,7 +669,7 @@ elseif args.command == "start" then
     verbosity = args.verbosity,
   })
 
-  local fg_env = os.getenv("TOKU_FG")
+  local fg_env = env.var("TOKU_FG", nil)
   local fg = args.fg or (fg_env ~= nil and fg_env ~= "" and fg_env ~= "0")
 
   capability(m, "start", "start is only available for web projects")({ test = args.test, fg = fg })
@@ -706,16 +707,16 @@ elseif args.command == "clean" then
   })
 
   if args.dry_run then
-    io.stdout:write("Would remove:\n")
+    stdout:write("Would remove:\n")
   else
-    io.stdout:write("Removed:\n")
+    stdout:write("Removed:\n")
   end
   if removed and #removed > 0 then
     for _, fp in ipairs(removed) do
-      io.stdout:write("  " .. fp .. "\n")
+      stdout:write("  " .. fp .. "\n")
     end
   else
-    io.stdout:write("  (nothing to clean)\n")
+    stdout:write("  (nothing to clean)\n")
   end
 
 elseif args.command == "setup" then
@@ -737,7 +738,7 @@ elseif args.command == "doctor" then
     path = shell_path,
     argv0 = arg and arg[0] or nil,
   }) > 0 then
-    os.exit(1)
+    sys.exit(1)
   end
 
 elseif args.command == "luarocks" then
@@ -789,15 +790,15 @@ end
 
 end
 
-if os.getenv("TOKU_TRACE") then
+if env.var("TOKU_TRACE", nil) then
   main()
 else
   (function (ok, e)
     if ok then
       return
     end
-    io.stderr:write("toku: " .. tostring(e) .. "\n")
-    io.stderr:write("  (set TOKU_TRACE=1 for the full Lua traceback)\n")
-    os.exit(1)
+    fs.stderr:write("toku: " .. tostring(e) .. "\n")
+    fs.stderr:write("  (set TOKU_TRACE=1 for the full Lua traceback)\n")
+    sys.exit(1)
   end)(err.pcall(main))
 end

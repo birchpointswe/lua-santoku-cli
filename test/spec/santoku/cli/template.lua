@@ -1,4 +1,6 @@
-if os.getenv("TK_CLI_WASM") == "1" then
+local env = require("santoku.env")
+
+if env.var("TK_CLI_WASM", nil) == "1" then
   print("Skipping test when TK_CLI_WASM is 1")
   return
 end

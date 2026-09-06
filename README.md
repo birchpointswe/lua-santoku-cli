@@ -8,14 +8,6 @@
 santoku-make to build, test, install, and release Lua libraries, executables, and web
 apps, and it exposes the templating, bundling, and interpreter utilities standalone.
 
-## Install
-
-Install instructions live at [santoku.dev](https://santoku.dev/#install).
-The sanctioned path is `setup-toku.sh`, served by the site: download it,
-read it, then run it. It builds a pinned lua 5.1 and luarocks from
-sha256-verified sources into `~/.local/share/toku` (honouring
-`XDG_DATA_HOME`), installs santoku-cli there, and writes nothing else.
-
 ## Setup
 
 toku requires a one-time setup before any command that needs lua or
@@ -79,18 +71,6 @@ drift against the pinned versions. It also reports your shell `PATH`
 wiring and build prerequisites, and exits nonzero when a problem is
 found.
 
-## Example
-
-```sh
-toku init --name my-lib
-toku test --iterate
-toku install
-toku release
-```
-
-Every project command reads a `make.lua` descriptor in the current directory and writes
-into `build/<env>/`, so builds, test trees, and release artifacts never collide.
-
 ## Documentation
 
 Runnable examples and the full API: [santoku.dev](https://santoku.dev/#santoku-cli).
@@ -98,60 +78,7 @@ Runnable examples and the full API: [santoku.dev](https://santoku.dev/#santoku-c
 For agents and LLM tooling: [llms.txt](https://santoku.dev/llms.txt) for the index,
 [llms-full.txt](https://santoku.dev/llms-full.txt) for every documented example.
 
-## Tests
-
-The tests are the spec. For the exhaustive surface, read them:
-[`test/spec/santoku/cli/template.lua`](test/spec/santoku/cli/template.lua),
-[`test/spec/santoku/cli/setup.lua`](test/spec/santoku/cli/setup.lua).
-
-The setup tests cover path resolution and the delegation from
-`toku setup --repair` and `--upgrade` to the stored `setup-toku.sh`;
-provisioning itself lives in that script and is exercised by running it.
-
 ## License
 
 MIT, see [LICENSE](LICENSE).
 
-## More examples
-
-```lua
-if os.getenv("TK_CLI_WASM") == "1" then
-  print("Skipping test when TK_CLI_WASM is 1")
-  return
-end
-
-local test = require("santoku.test")
-
-local err = require("santoku.error")
-local assert = err.assert
-
-local validate = require("santoku.validate")
-local eq = validate.isequal
-
-local env = require("santoku.env")
-local var = env.var
-
-local sys = require("santoku.system")
-local sh = sys.sh
-
-local toku = var("LUA") .. " -l luacov bin/toku.lua"
-
-local function run (cmd)
-  return sh({ "sh", "-c", cmd })()
-end
-
-test("render a lua template from stdin to stdout", function ()
-  assert(eq("hello", run(
-    "echo '<% return \"hello\" %>' | " .. toku .. " template -f - -o -")))
-end)
-
-test("a config file supplies the names a template can see", function ()
-  assert(eq("12", run(
-    "echo '<% return a .. c %>' | " ..
-    toku .. " template -f - -o - -c test/res/tmpl.cfg0.lua")))
-end)
-
-test("run a lua string through an explicit interpreter", function ()
-  assert(eq("2", run(toku .. " lua --lua " .. var("LUA") .. " --string 'print(1 + 1)'")))
-end)
-```

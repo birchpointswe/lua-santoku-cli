@@ -1,9 +1,12 @@
-if os.getenv("TK_CLI_WASM") == "1" then
+local env = require("santoku.env")
+
+if env.var("TK_CLI_WASM", nil) == "1" then
   print("Skipping test when TK_CLI_WASM is 1")
   return
 end
 
 local test = require("santoku.test")
+local str = require("santoku.string")
 
 local validate = require("santoku.validate")
 local eq = validate.isequal
@@ -12,7 +15,6 @@ local err = require("santoku.error")
 local assert = err.assert
 local pcall = err.pcall
 
-local env = require("santoku.env")
 local var = env.var
 
 local fs = require("santoku.fs")
@@ -23,7 +25,7 @@ local setup = require("santoku.cli.setup")
 test("setup", function ()
 
   test("paths respect XDG_DATA_HOME", function ()
-    local old = os.getenv("XDG_DATA_HOME")
+    local old = env.var("XDG_DATA_HOME", nil)
     sys.setenv("XDG_DATA_HOME", "/scratch/data")
     local p = setup.paths()
     sys.setenv("XDG_DATA_HOME", old or "")
@@ -37,7 +39,7 @@ test("setup", function ()
   end)
 
   test("paths default to ~/.local/share when XDG_DATA_HOME is unset", function ()
-    local old = os.getenv("XDG_DATA_HOME")
+    local old = env.var("XDG_DATA_HOME", nil)
     sys.setenv("XDG_DATA_HOME", "")
     local p = setup.paths()
     sys.setenv("XDG_DATA_HOME", old or "")
@@ -67,9 +69,9 @@ test("setup", function ()
   end)
 
   test("activate is a no-op when there is no manifest", function ()
-    local before = os.getenv("PATH")
+    local before = env.var("PATH", nil)
     assert(eq(nil, setup.activate("/nonexistent/scratch/toku")))
-    assert(eq(before, os.getenv("PATH")))
+    assert(eq(before, env.var("PATH", nil)))
   end)
 
   test("uninstall refuses unexpected roots", function ()
@@ -80,8 +82,8 @@ test("setup", function ()
   test("run errors without a stored setup-toku.sh", function ()
     local ok, e, hint = pcall(setup.run, { root = "/nonexistent/scratch/toku" })
     assert(eq(false, ok))
-    assert(string.find(tostring(e), "provisioning script", 1, true) ~= nil)
-    assert(string.find(tostring(hint), "santoku.dev/setup-toku.sh", 1, true) ~= nil)
+    assert(str.find(tostring(e), "provisioning script", 1, true) ~= nil)
+    assert(str.find(tostring(hint), "santoku.dev/setup-toku.sh", 1, true) ~= nil)
   end)
 
   test("delegation", function ()
@@ -102,8 +104,8 @@ test("setup", function ()
       stored("#!/bin/sh\nLUA_VERSION=9.9.9\nLUAROCKS_VERSION=8.8.8\nexit 1\n")
       local ok, e = pcall(setup.run, { root = root })
       assert(eq(false, ok))
-      assert(string.find(tostring(e), "9.9.9", 1, true) ~= nil)
-      assert(string.find(tostring(e), setup.pins.lua.version, 1, true) ~= nil)
+      assert(str.find(tostring(e), "9.9.9", 1, true) ~= nil)
+      assert(str.find(tostring(e), setup.pins.lua.version, 1, true) ~= nil)
     end)
 
     test("run execs the stored script with --root, adding --rebuild for repair and upgrade", function ()
