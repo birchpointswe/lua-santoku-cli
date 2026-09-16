@@ -61,10 +61,6 @@ clua
   :count("?")
 
 clua
-  :args(0)
-  :count("?")
-
-clua
   :option("--trace", "Run the tracer")
   :args(0)
   :count("?")
