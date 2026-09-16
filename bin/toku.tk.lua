@@ -61,7 +61,6 @@ clua
   :count("?")
 
 clua
-  :option("--profile", "Run the profiler")
   :args(0)
   :count("?")
 
@@ -316,7 +315,6 @@ ctest:option("--env", "Environment and build sub-directory"):count("0-1")
 ctest:option("--config", "Config file to use"):count("0-1")
 ctest:flag("--iterate", "Iteratively run tests")
 ctest:flag("--wasm", "Run in WASM mode")
-ctest:flag("--profile", "Report the performance profile")
 ctest:flag("--trace", "Enable source tracing")
 ctest:flag("--skip-check", "Skip luacheck")
 ctest:option("--single", "Run a single test"):count("0-1")
@@ -523,7 +521,6 @@ elseif args.command == "test" then
       stop = args.stop,
       skip_check = args.skip_check,
       wasm = args.wasm,
-      profile = args.profile,
       trace = args.trace,
       single = args.single,
       match = args.match,
@@ -762,10 +759,6 @@ elseif args.command == "lua" then
     } }
   else
     cmd = { toolchain.lua_exe }
-  end
-
-  if args.profile then
-    arr.push(cmd, "-l", "santoku.profile")
   end
 
   if args.trace then
