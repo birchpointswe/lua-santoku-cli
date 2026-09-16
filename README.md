@@ -55,7 +55,7 @@ export PATH="$(toku setup --path):$PATH"
 ```
 
 or symlink the binaries you want from the directories `toku setup --path`
-prints into a directory of your choosing. toku never does this for you.
+prints into a directory of your choosing.
 
 `toku lua` runs the managed lua with the managed rocks tree on its package
 path. `toku luarocks ...` and `toku luac ...` pass through to the managed
