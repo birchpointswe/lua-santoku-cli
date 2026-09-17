@@ -8,6 +8,7 @@ local sys = require("santoku.system")
 local env = require("santoku.env")
 local arr = require("santoku.array")
 local tksetup = require("santoku.cli.setup")
+local tkskills = require("santoku.cli.skills")
 local inherit = require("santoku.inherit")
 local pushindex = inherit.pushindex
 
@@ -335,6 +336,15 @@ csetup:mutex(
     "Rebuild a broken or half-built toolchain via the stored setup-toku.sh, keeping installed rocks"),
   csetup:flag("--path", "Print the managed bin directories for PATH wiring"))
 
+local cskills = parser
+  :command("skills",
+    "Install the santoku agent skills from santoku.dev into your home directory, never into a project")
+
+cskills:option("--claude-dir", "Claude Code configuration directory (default: ~/.claude)"):count("0-1")
+cskills:option("--codex-dir", "Codex configuration directory (default: ~/.codex)"):count("0-1")
+cskills:flag("--force", "Overwrite an AGENTS.md that toku skills did not write")
+cskills:flag("--dry-run", "Report what would be written without writing it")
+
 parser
   :command("doctor", "Diagnose the managed toolchain and PATH wiring")
 
@@ -563,22 +573,15 @@ elseif args.command == "init" then
     dir = args.dir
   end
 
-  if args.web then
-    project.create_web({
+  local kind = args.web and "web" or args.api and "api" or "lib"
+  local scaffold = "create_" .. kind
+
+  capability(project, scaffold,
+    "the installed santoku-make cannot scaffold " .. kind .. " projects (it has no " ..
+    scaffold .. "); upgrade it with: toku luarocks install santoku-make")({
       name = name,
       dir = dir,
     })
-  elseif args.api then
-    project.create_api({
-      name = name,
-      dir = dir,
-    })
-  else
-    project.create_lib({
-      name = name,
-      dir = dir,
-    })
-  end
 
 elseif args.command == "install" then
 
@@ -724,6 +727,15 @@ elseif args.command == "setup" then
       repair = args.repair,
     })
   end
+
+elseif args.command == "skills" then
+
+  tkskills.install({
+    claude_dir = args.claude_dir,
+    codex_dir = args.codex_dir,
+    force = args.force,
+    dry_run = args.dry_run,
+  })
 
 elseif args.command == "doctor" then
 

@@ -348,6 +348,21 @@ local function doctor_managed (p, m, shellpath, prob)
   end
 end
 
+local project_entry_points = {
+  "init", "create_lib", "create_web", "create_api",
+}
+
+local function missing_project_entry_points ()
+  local project = require("santoku.make.project")
+  local missing = {}
+  for _, name in ipairs(project_entry_points) do
+    if type(project[name]) ~= "function" then
+      missing[#missing + 1] = name
+    end
+  end
+  return missing
+end
+
 local function web_parts ()
   if not (fs.exists("make.lua") or fs.exists("make.common.lua")) then
     return false, false
@@ -409,6 +424,15 @@ local function doctor (opts)
     printf("  build prerequisites: missing %s\n", tconcat(missing, ", "))
   else
     printf("  build prerequisites: ok\n")
+  end
+  local pmissing = missing_project_entry_points()
+  if #pmissing > 0 then
+    printf("  santoku-make: missing %s\n", tconcat(pmissing, ", "))
+    prob("the installed santoku-make does not provide " .. tconcat(pmissing, ", ")
+      .. ", which this toku calls; a stale santoku-make surfaces as a nil-value "
+      .. "error mid-command. Upgrade it: toku luarocks install santoku-make")
+  else
+    printf("  santoku-make: provides every entry point this toku calls\n")
   end
   local wclient, wserver = web_parts()
   if wclient or wserver then
