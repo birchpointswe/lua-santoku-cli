@@ -8,72 +8,11 @@
 santoku-make to build, test, install, and release Lua libraries, executables, and web
 apps, and it exposes the templating, bundling, and interpreter utilities standalone.
 
-## Setup
-
-toku requires a one-time setup before any command that needs lua or
-luarocks (`toku lua`, `toku luarocks`, and the project commands that drive
-builds). Until then those commands error and name the steps to run. The
-toolchain is provisioned by `setup-toku.sh` from
-[santoku.dev](https://santoku.dev/#install) and recorded in a manifest at
-`~/.local/share/toku` that toku resolves through on every run.
-
-`setup-toku.sh` is the only provisioner. When it provisions, it stores a
-copy of itself at `~/.local/share/toku/setup-toku.sh`, so the managed tree
-always carries the script that built it. The `toku setup` subcommand is
-maintenance around that:
-
-```sh
-toku setup
-toku setup --path
-toku setup --upgrade
-toku setup --repair
-toku setup --uninstall
-```
-
-- `toku setup` re-runs the stored `setup-toku.sh` to complete a partial
-  managed tree; it is safe to re-run. If the stored copy is missing, or
-  its pinned versions differ from this santoku-cli's, it errors and points
-  you back at https://santoku.dev/setup-toku.sh.
-- `--path` prints the managed bin directories, colon-joined.
-- `--upgrade` runs the stored `setup-toku.sh` with `--rebuild`: lua and
-  luarocks are rebuilt at the pinned versions and santoku-cli is
-  reinstalled, keeping the installed rocks tree.
-- `--repair` (alias `--force`) recovers a half-built or broken managed tree
-  the same way.
-- `--uninstall` removes `~/.local/share/toku` entirely, leaving the machine
-  as found.
-
-toku prepends the managed bin directories to `PATH` inside its own
-process, so every `lua` and `luarocks` invocation made by toku-driven
-builds uses the managed pair. Nothing outside the toku process is
-changed: no symlinks, no shell rc edits.
-
-To use the managed pair from your shell as well, wire it up yourself:
-
-```sh
-export PATH="$(toku setup --path):$PATH"
-```
-
-or symlink the binaries you want from the directories `toku setup --path`
-prints into a directory of your choosing.
-
-`toku lua` runs the managed lua with the managed rocks tree on its package
-path. `toku luarocks ...` and `toku luac ...` pass through to the managed
-luarocks and luac. `toku bundle --luac-default` compiles bytecode with the
-managed luac rather than whatever `luac` is on PATH, so a system 5.4 luac
-can never corrupt a bundle.
-
-## Doctor
-
-`toku doctor` reports the mode (managed or not set up) and which lua and
-luarocks are actually in effect. It checks the tree's health and version
-drift against the pinned versions. It also reports your shell `PATH`
-wiring and build prerequisites, and exits nonzero when a problem is
-found.
-
 ## Documentation
 
 Runnable examples and the full API: [santoku.dev](https://santoku.dev/#santoku-cli).
+
+Installing and maintaining the managed toolchain: [santoku.dev/install](https://santoku.dev/install).
 
 For agents and LLM tooling: [llms.txt](https://santoku.dev/llms.txt) for the index,
 [llms-full.txt](https://santoku.dev/llms-full.txt) for every documented example.
@@ -81,4 +20,3 @@ For agents and LLM tooling: [llms.txt](https://santoku.dev/llms.txt) for the ind
 ## License
 
 MIT, see [LICENSE](LICENSE).
-
