@@ -794,11 +794,16 @@ end
 if env.var("TOKU_TRACE", nil) then
   main()
 else
-  (function (ok, e)
+  (function (ok, ...)
     if ok then
       return
     end
-    fs.stderr:write("toku: " .. tostring(e) .. "\n")
+    local e = { ... }
+    local parts = {}
+    for i = 1, #e do
+      arr.push(parts, tostring(e[i]))
+    end
+    fs.stderr:write("toku: " .. arr.concat(parts, ": ") .. "\n")
     fs.stderr:write("  (set TOKU_TRACE=1 for the full Lua traceback)\n")
     sys.exit(1)
   end)(err.pcall(main))
