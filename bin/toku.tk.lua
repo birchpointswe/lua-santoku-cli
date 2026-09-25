@@ -76,6 +76,10 @@ clua:mutex(
     :args(1)
     :count("?"))
 
+clua
+  :argument("script", "Run the provided lua file, as --file does")
+  :args("?")
+
 local cbundle = parser
   :command("bundle", "Create standalone executables")
 
@@ -777,10 +781,14 @@ elseif args.command == "lua" then
     arr.push(cmd, "-l", "santoku.autoserialize")
   end
 
+  if args.script and (args.string or args.file) then
+    err.error("toku lua takes one of a script path, --file or --string", args.script)
+  end
+
   if args.string then
     arr.push(cmd, "-e", args.string)
-  elseif args.file then
-    arr.push(cmd, args.file)
+  elseif args.file or args.script then
+    arr.push(cmd, args.file or args.script)
   end
 
   sys.execute(cmd)
