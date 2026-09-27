@@ -80,6 +80,11 @@ clua
   :argument("script", "Run the provided lua file, as --file does")
   :args("?")
 
+clua:option("--tree", "Run against a project lua tree: test, or build for web projects"):count("0-1")
+clua:option("--dir", "Top-level build directory, with --tree"):count("0-1")
+clua:option("--env", "Environment and build sub-directory, with --tree"):count("0-1")
+clua:option("--config", "Config file to use, with --tree"):count("0-1")
+
 local cbundle = parser
   :command("bundle", "Create standalone executables")
 
@@ -243,13 +248,13 @@ cpack:option("--env", "Environment and build sub-directory"):count("0-1")
 cpack:option("--config", "Config file to use"):count("0-1")
 cpack:flag("--skip-tests", "Skip tests")
 
-local cexec = parser
-  :command("exec", "Execute a command in the build environment")
+local cenv = parser
+  :command("env", "Print shell exports for a project lua tree, for eval")
 
-cexec:option("--dir", "Top-level build directory"):count("0-1")
-cexec:option("--env", "Environment and build sub-directory"):count("0-1")
-cexec:option("--config", "Config file to use"):count("0-1")
-cexec:argument("args", "Arguments"):args("*")
+cenv:option("--tree", "Project lua tree: test, or build for web projects"):count(1)
+cenv:option("--dir", "Top-level build directory"):count("0-1")
+cenv:option("--env", "Environment and build sub-directory"):count("0-1")
+cenv:option("--config", "Config file to use"):count("0-1")
 
 local cbuild = parser
   :command("build", "Build the project")
@@ -372,11 +377,11 @@ tksetup.activate()
 local function needs_toolchain ()
   local c = args.command
   if c == "luarocks" or c == "luac" or c == "install" or c == "release" or
-    c == "pack" or c == "exec" or c == "build" or c == "start" or c == "stop" then
+    c == "pack" or c == "env" or c == "build" or c == "start" or c == "stop" then
     return true
   end
   if c == "lua" then
-    return not args.lua
+    return args.tree or not args.lua
   end
   if c == "test" then
     return #args.files == 0
@@ -397,6 +402,16 @@ local function capability (m, name, msg)
     error(msg)
   end
   return m[name]
+end
+
+local function tree_env (a)
+  local m = project.init({
+    dir = a.dir,
+    env = a.env,
+    config = a.config,
+    verbosity = a.verbosity,
+  })
+  return capability(m, "lua_env", "this project has no lua trees (wasm lib projects have none)")(a.tree)
 end
 
 local function reject_flags (m, want, flags)
@@ -634,16 +649,14 @@ elseif args.command == "pack" then
 
   capability(m, "pack", "pack is not available (requires a non-wasm lib project)")()
 
-elseif args.command == "exec" then
+elseif args.command == "env" then
 
-  local m = project.init({
-    dir = args.dir,
-    env = args.env,
-    config = args.config,
-    verbosity = args.verbosity,
-  })
-
-  capability(m, "exec", "exec is not available (requires a non-wasm lib project)")(args.args)
+  local t = tree_env(args)
+  local function quote (s)
+    return "'" .. str.gsub(s, "'", "'\\''") .. "'"
+  end
+  fs.stdout:write("export LUA_PATH=" .. quote(t.lua_path) .. "\n")
+  fs.stdout:write("export LUA_CPATH=" .. quote(t.lua_cpath) .. "\n")
 
 elseif args.command == "build" then
 
@@ -760,8 +773,15 @@ elseif args.command == "luac" then
 
 elseif args.command == "lua" then
 
+  if not args.tree and (args.dir or args.env or args.config) then
+    err.error("toku lua takes --dir, --env and --config only with --tree")
+  end
+
   local cmd
-  if args.lua then
+  if args.tree then
+    local t = tree_env(args)
+    cmd = { args.lua or t.lua, env = { LUA_PATH = t.lua_path, LUA_CPATH = t.lua_cpath } }
+  elseif args.lua then
     cmd = { args.lua }
   elseif toolchain.mode == "managed" then
     local p = toolchain.paths
