@@ -77,8 +77,8 @@ clua:mutex(
     :count("?"))
 
 clua
-  :argument("script", "Run the provided lua file, as --file does")
-  :args("?")
+  :argument("script", "A lua file to run, then its arguments; with --file, all are arguments. Put -- first when an argument starts with -")
+  :args("*")
 
 clua:option("--tree", "Run against a project lua tree: test, or build for web projects"):count("0-1")
 clua:option("--dir", "Top-level build directory, with --tree"):count("0-1")
@@ -801,14 +801,18 @@ elseif args.command == "lua" then
     arr.push(cmd, "-l", "santoku.autoserialize")
   end
 
-  if args.script and (args.string or args.file) then
-    err.error("toku lua takes one of a script path, --file or --string", args.script)
+  local script_args = args.script
+  if args.string and #script_args > 0 then
+    err.error("toku lua takes no script arguments with --string", script_args[1])
   end
 
   if args.string then
     arr.push(cmd, "-e", args.string)
-  elseif args.file or args.script then
-    arr.push(cmd, args.file or args.script)
+  elseif args.file then
+    arr.push(cmd, args.file)
+    arr.copy(cmd, script_args)
+  elseif #script_args > 0 then
+    arr.copy(cmd, script_args)
   end
 
   sys.execute(cmd)
