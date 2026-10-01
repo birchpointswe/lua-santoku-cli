@@ -80,6 +80,15 @@ test("license", function ()
     assert(str.find(errs, "toku license: a.lua: missing header", 1, true), errs)
   end)
 
+  test("--check reads make.lua's vendored entries", function ()
+    fixture("return { env = { name = \"x\", copyright = \"Acme\", vendored = {\n"
+      .. "  { name = \"Lib\", version = \"1.0\", license = \"MIT\", path = \"ghost/*\" } } } }\n")
+    fs.writefile(fs.join(dir, "LICENSE"), "Copyright 2023 Acme. All rights reserved.\n")
+    local status, _, errs = toku("--check")
+    assert(eq(1, status), errs)
+    assert(str.find(errs, "toku license: vendored Lib: ghost/* matches no tracked file", 1, true), errs)
+  end)
+
   test("no make.lua and no flags warns and writes nothing", function ()
     fixture("return {}\n")
     fs.rm(fs.join(dir, "make.lua"))

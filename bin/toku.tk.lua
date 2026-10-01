@@ -230,7 +230,7 @@ clicense:option("--license", "SPDX license id (overrides make.lua)")
   :count("0-1")
 clicense:option("--copyright", "Copyright holder (overrides make.lua)"):count("0-1")
 clicense:option("--year", "Copyright year (default: the year of the first commit)"):count("0-1")
-clicense:option("--exclude", "Lua pattern of paths to leave alone (overrides make.lua's license_exclude)")
+clicense:option("--exclude", "Path glob of generated files to leave alone (overrides make.lua's license_exclude)")
   :args(1)
   :count("*")
 clicense:option("--config", "Config file to use"):count("0-1")
@@ -650,6 +650,7 @@ elseif args.command == "license" then
     copyright = args.copyright or conf.copyright,
     year = args.year,
     exclude = #args.exclude > 0 and args.exclude or conf.license_exclude,
+    vendored = conf.vendored,
     files = #args.files > 0 and args.files or nil,
   }
 
