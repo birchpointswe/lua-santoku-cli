@@ -3,6 +3,7 @@ local error = err.error
 local argparse = require("argparse")
 local bundle = require("santoku.bundle")
 local project = require("santoku.make.project")
+local license = require("santoku.make.license")
 local runtests = require("santoku.test.runner")
 local sys = require("santoku.system")
 local env = require("santoku.env")
@@ -215,6 +216,25 @@ cinit:option("--dir", "Project directory"):count("0-1")
 cinit:mutex(
   cinit:flag("--web", "Initialize a web project (default: library project)"),
   cinit:flag("--api", "Initialize a server-only API project (default: library project)"))
+cinit:option("--license", "SPDX license id; needs --copyright (default: none, all rights reserved)")
+  :target("license_id")
+  :count("0-1")
+cinit:option("--copyright", "Copyright holder; alone, it writes an all-rights-reserved LICENSE"):count("0-1")
+
+local clicense = parser
+  :command("license", "Write LICENSE and per-file SPDX headers from make.lua's license and copyright")
+
+clicense:flag("--check", "Report missing or wrong notices and exit nonzero, writing nothing")
+clicense:option("--license", "SPDX license id (overrides make.lua)")
+  :target("license_id")
+  :count("0-1")
+clicense:option("--copyright", "Copyright holder (overrides make.lua)"):count("0-1")
+clicense:option("--year", "Copyright year (default: the year of the first commit)"):count("0-1")
+clicense:option("--exclude", "Lua pattern of paths to leave alone (overrides make.lua's license_exclude)")
+  :args(1)
+  :count("*")
+clicense:option("--config", "Config file to use"):count("0-1")
+clicense:argument("files", "Files to check or update (default: every tracked file)"):args("*")
 
 local cinstall = parser
   :command("install", "Install the project")
@@ -402,6 +422,19 @@ local function capability (m, name, msg)
     error(msg)
   end
   return m[name]
+end
+
+local function license_warnings (warns)
+  for i = 1, #warns do
+    fs.stderr:write("toku: warning: " .. warns[i] .. "; set it in make.lua\n")
+  end
+end
+
+local function init_project (opts)
+  local m = project.init(opts)
+  local e = m.config and m.config.env or {}
+  license_warnings(license.warnings(e.license, e.copyright))
+  return m
 end
 
 local function tree_env (a)
@@ -600,7 +633,53 @@ elseif args.command == "init" then
     scaffold .. "); upgrade it with: toku luarocks install santoku-make")({
       name = name,
       dir = dir,
+      license = args.license_id,
+      copyright = args.copyright,
     })
+
+elseif args.command == "license" then
+
+  local cfg = args.config or "make.lua"
+  local conf = {}
+  if args.config or fs.exists(cfg) then
+    conf = runfile(cfg, pushindex({}, _G)).env or {}
+  end
+  local opts = {
+    dir = ".",
+    license = args.license_id or conf.license,
+    copyright = args.copyright or conf.copyright,
+    year = args.year,
+    exclude = #args.exclude > 0 and args.exclude or conf.license_exclude,
+    files = #args.files > 0 and args.files or nil,
+  }
+
+  if args.check then
+    local problems, warns = license.check(opts)
+    license_warnings(warns)
+    for i = 1, #problems do
+      fs.stderr:write("toku license: " .. problems[i] .. "\n")
+    end
+    if #problems > 0 then
+      sys.exit(1)
+    end
+  else
+    local report = license.apply(opts)
+    license_warnings(report.warnings)
+    local labels = {
+      { "missing", "added a header" },
+      { "stale", "replaced a header" },
+      { "foreign", "left alone, it carries another notice (exclude it or fix it by hand)" },
+    }
+    for i = 1, #labels do
+      local fps = report[labels[i][1]] or {}
+      for j = 1, #fps do
+        stdout:write(fps[j] .. ": " .. labels[i][2] .. "\n")
+      end
+    end
+    if opts.copyright then
+      stdout:write("LICENSE written for " .. report.year .. " " .. opts.copyright .. "\n")
+    end
+  end
 
 elseif args.command == "install" then
 
@@ -626,7 +705,7 @@ elseif args.command == "install" then
 
 elseif args.command == "release" then
 
-  local m = project.init({
+  local m = init_project({
     dir = args.dir,
     env = args.env,
     config = args.config,
