@@ -1,8 +1,11 @@
+-- SPDX-License-Identifier: MIT
+-- SPDX-FileCopyrightText: 2023 Birch Point SWE
 local env = {
   name = "santoku-cli",
-  version = "2.18.0-1",
+  version = "2.18.1-1",
   variable_prefix = "TK_CLI",
   license = "MIT",
+  copyright = "Birch Point SWE",
   public = true,
   dependencies = {
     "lua == 5.1",

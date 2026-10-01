@@ -1,3 +1,5 @@
+-- SPDX-License-Identifier: MIT
+-- SPDX-FileCopyrightText: 2023 Birch Point SWE
 local env = require("santoku.env")
 
 if env.var("TK_CLI_WASM", nil) == "1" then
