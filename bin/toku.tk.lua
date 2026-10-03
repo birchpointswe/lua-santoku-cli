@@ -246,6 +246,7 @@ cinstall:option("--env", "Environment and build sub-directory"):count("0-1")
 cinstall:option("--config", "Config file to use"):count("0-1")
 cinstall:option("--luarocks-config", "Luarocks config file to use"):count("0-1")
 cinstall:flag("--skip-tests", "Skip tests")
+cinstall:flag("--deps-only", "Install only the dependencies make.lua declares, reading nothing else")
 cinstall:flag("--bundled", "Bundle executables from bin/ to standalone")
 cinstall:option("--prefix", "Install prefix for bundled executables"):count("0-1")
 cinstall:option("--bundle-cc", "Compiler for bundling"):count("0-1")
@@ -285,6 +286,7 @@ cbuild:option("--dir", "Top-level build directory"):count("0-1")
 cbuild:option("--env", "Environment and build sub-directory"):count("0-1")
 cbuild:option("--config", "Config file to use"):count("0-1")
 cbuild:flag("--test", "Build the test environment")
+cbuild:flag("--deps-only", "Build only the dependencies make.lua declares, reading nothing else")
 cbuild:option("--openresty-dir", "Openresty installation directory"):count("0-1")
 
 local cstart = parser
@@ -696,6 +698,14 @@ elseif args.command == "install" then
     verbosity = args.verbosity,
   })
 
+  if args.deps_only then
+    if args.bundled then
+      error("--deps-only and --bundled don't combine")
+    end
+    capability(m, "install", "install is not available for web projects (use toku build)")
+    return m.deps_only()
+  end
+
   capability(m, "install", "install is not available for web projects (use toku build)")({
     bundled = args.bundled,
     prefix = args.prefix,
@@ -751,6 +761,14 @@ elseif args.command == "build" then
   })
 
   reject_flags(m, "web", { "openresty-dir" })
+
+  if args.deps_only then
+    if args.test then
+      error("--deps-only builds the build environment's dependencies; drop --test")
+    end
+    capability(m, "build", "build is only available for web projects (use toku install)")
+    return m.deps_only()
+  end
 
   capability(m, "build", "build is only available for web projects (use toku install)")({ test = args.test })
 
